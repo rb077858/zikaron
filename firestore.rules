@@ -12,7 +12,13 @@ service cloud.firestore {
     }
 
     match /memorials/{memorialId} {
-      allow read: if resource.data.published == true || isOwner(resource.data);
+      // `resource == null` covers reads of a document that doesn't exist yet
+      // (e.g. checking whether a candidate slug is free before creating a
+      // page) — without it, `resource.data` errors on a null resource and
+      // the read is denied, even though nothing sensitive is being exposed.
+      allow read: if resource == null
+        || resource.data.published == true
+        || isOwner(resource.data);
 
       allow create: if isSignedIn()
         && request.resource.data.ownerId == request.auth.uid
