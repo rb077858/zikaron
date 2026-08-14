@@ -51,13 +51,6 @@ export type Photo = {
   order: number;
 };
 
-export type Candle = {
-  id: string;
-  name: string;
-  message?: string | null;
-  createdAt?: Timestamp;
-};
-
 /**
  * Firestore security rules can't reliably `get()` a parent document whose ID
  * contains Hebrew characters (our slugs), so ownership/visibility checks for
@@ -120,12 +113,8 @@ export async function deleteMemorial(slug: string): Promise<void> {
   const photosSnap = await getDocs(
     query(collection(db, "memorials", slug, "photos"), where("published", "==", true))
   );
-  const candlesSnap = await getDocs(
-    query(collection(db, "memorials", slug, "candles"), where("published", "==", true))
-  );
   const batch = writeBatch(db);
   photosSnap.forEach((d) => batch.delete(d.ref));
-  candlesSnap.forEach((d) => batch.delete(d.ref));
   batch.delete(doc(db, "memorials", slug));
   await batch.commit();
 }
@@ -165,20 +154,6 @@ export function subscribeToPhotos(
   });
 }
 
-export function subscribeToCandles(
-  slug: string,
-  cb: (candles: Candle[]) => void
-): Unsubscribe {
-  const q = query(
-    collection(db, "memorials", slug, "candles"),
-    where("published", "==", true),
-    orderBy("createdAt", "desc")
-  );
-  return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Candle, "id">) })));
-  });
-}
-
 export async function getUserMemorials(ownerId: string): Promise<Memorial[]> {
   const q = query(
     collection(db, "memorials"),
@@ -187,21 +162,6 @@ export async function getUserMemorials(ownerId: string): Promise<Memorial[]> {
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as Memorial);
-}
-
-export async function addCandle(
-  slug: string,
-  name: string,
-  message: string | undefined,
-  ownership: Ownership
-): Promise<void> {
-  await addDoc(collection(db, "memorials", slug, "candles"), {
-    name: name.trim().slice(0, 80),
-    message: message?.trim() ? message.trim().slice(0, 500) : null,
-    ownerId: ownership.ownerId,
-    published: ownership.published,
-    createdAt: serverTimestamp(),
-  });
 }
 
 export async function deletePhoto(slug: string, photoId: string): Promise<void> {

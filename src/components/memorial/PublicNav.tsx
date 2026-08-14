@@ -4,16 +4,12 @@ import { useEffect, useState } from "react";
 
 type NavItem = { href: string; icon: string; label: string };
 
-// Order mirrors the section order on the page. Candle-lighting is a closing,
-// participatory action rather than the entry point, so it sits last — not
-// first, where a first-time visitor would otherwise be asked to act before
-// they've even seen who the page is for.
+// Order mirrors the section order on the page.
 const BASE_ITEMS: NavItem[] = [
   { href: "#top", icon: "⌂", label: "ראשי" },
   { href: "#whoami", icon: "🪪", label: "מי אני?" },
   { href: "#tehilim", icon: "📖", label: "תהילים" },
   { href: "#media", icon: "🖼️", label: "מדיה" },
-  { href: "#candle", icon: "🕯️", label: "הדלקת נר" },
 ];
 
 export function PublicNav({
