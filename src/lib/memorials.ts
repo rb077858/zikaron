@@ -16,13 +16,8 @@ import {
   Timestamp,
   type Unsubscribe,
 } from "firebase/firestore";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 export type Memorial = {
   slug: string;
@@ -283,13 +278,7 @@ export async function deletePhoto(slug: string, photoId: string): Promise<void> 
 }
 
 async function uploadFile(slug: string, folder: string, file: File): Promise<string> {
-  const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-  const path = `memorials/${slug}/${folder}/${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2)}.${ext}`;
-  const fileRef = ref(storage, path);
-  await uploadBytes(fileRef, file);
-  return getDownloadURL(fileRef);
+  return uploadToCloudinary(file, `memorials/${slug}/${folder}`);
 }
 
 export async function uploadCoverPhoto(slug: string, file: File): Promise<void> {
@@ -324,14 +313,5 @@ export async function addGalleryPhotos(
       published: ownership.published,
       createdAt: serverTimestamp(),
     });
-  }
-}
-
-export async function removeUploadedFileByUrl(url: string): Promise<void> {
-  try {
-    const fileRef = ref(storage, url);
-    await deleteObject(fileRef);
-  } catch {
-    // best-effort cleanup; ignore failures (e.g. already deleted)
   }
 }

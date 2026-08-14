@@ -4,41 +4,56 @@
 תמונות, סיפור חיים, קיר נרות, יום השנה הבא לפי הלוח העברי) וקבלת קישור + ברקוד
 להדבקה על המצבה.
 
-**אין כאן שרת להריץ.** האתר הוא קובצי HTML/JS סטטיים בלבד, שמתארחים ב-GitHub
-Pages תחת `r.is-cool.dev/zikaron`. כל מה שדינמי (התחברות, שמירת דפים, העלאת
-תמונות, קיר הנרות) קורה ישירות מהדפדפן מול **Firebase** (Authentication,
-Firestore, Storage). אחרי ההגדרה החד-פעמית למטה, כל עדכון לאתר הוא סתם
-`git push` — GitHub Actions בונה ומפרסם אוטומטית.
+**אין כאן שרת להריץ, ואין עלות.** האתר הוא קובצי HTML/JS סטטיים בלבד,
+שמתארחים ב-GitHub Pages תחת `r.is-cool.dev/zikaron` (חינם). ההתחברות ומסד
+הנתונים רצים ישירות מהדפדפן מול **Firebase Authentication + Firestore**
+(חינמיים לגמרי בתוכנית ה-Spark, בלי צורך בכרטיס אשראי). קבצים (תמונות,
+הקלטות) מועלים ל-**Cloudinary** במקום ל-Firebase Storage — כי Firebase
+Storage דורש שדרוג לתוכנית בתשלום (Blaze) גם לשימוש זעיר, בעוד ל-Cloudinary
+יש תוכנית חינמית אמיתית בלי כרטיס אשראי. אחרי ההגדרה החד-פעמית למטה, כל
+עדכון לאתר הוא סתם `git push` — GitHub Actions בונה ומפרסם אוטומטית.
 
 ## הגדרה חד-פעמית
 
-שני חלקים, שניהם דרך דפדפן — לא צריך טרמינל בכלל (אלא אם תרצו, ראו הערה בסוף).
+שלושה חלקים, כולם דרך דפדפן — לא צריך טרמינל בכלל (אלא אם תרצו, ראו הערה בסוף).
 
-### 1. פרויקט Firebase
+### 1. פרויקט Firebase (חינם, בלי כרטיס אשראי)
 
 1. צרו פרויקט חדש ב-[Firebase Console](https://console.firebase.google.com).
+   השאירו אותו בתוכנית **Spark** (החינמית) — אין צורך לשדרג ל-Blaze בכלל.
 2. **Authentication** → Sign-in method → הפעילו את ספק **Google**.
    בטאב Settings → Authorized domains הוסיפו את `r.is-cool.dev`.
 3. **Firestore Database** → Create database (Production mode).
-4. **Storage** → Get started (עם ה-bucket שנוצר כברירת מחדל).
-5. **Firestore → Rules**: העתיקו את התוכן של הקובץ [`firestore.rules`](./firestore.rules)
+4. **Firestore → Rules**: העתיקו את התוכן של הקובץ [`firestore.rules`](./firestore.rules)
    מהריפו והדביקו שם, ואז Publish.
-6. **Storage → Rules**: אותו דבר עם [`storage.rules`](./storage.rules).
-7. **Project settings** (גלגל השיניים) → General → Your apps → הוסיפו אפליקציית
+5. **Project settings** (גלגל השיניים) → General → Your apps → הוסיפו אפליקציית
    **Web** (סמל `</>`), תנו לה שם, ותעתיקו את ערכי ה-config שמופיעים
-   (`apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`,
-   `appId`) — תצטרכו אותם בשלב הבא.
+   (`apiKey`, `authDomain`, `projectId`, `messagingSenderId`, `appId`) —
+   תצטרכו אותם בשלב 3.
 
-### 2. חיבור ל-GitHub Pages
+   **חשוב:** אל תפעילו את **Storage** מה-Firebase Console — הוא דורש שדרוג
+   לתוכנית בתשלום (Blaze). אחסון הקבצים באתר הזה קורה דרך Cloudinary (שלב הבא),
+   לא דרך Firebase.
+
+### 2. חשבון Cloudinary (חינם, בלי כרטיס אשראי) — לתמונות והקלטות
+
+1. הרשמו בחינם ב-[cloudinary.com](https://cloudinary.com).
+2. בדף הבית של ה-Dashboard, העתיקו את ה-**Cloud name**.
+3. Settings (גלגל השיניים) → Upload → Upload presets → **Add upload preset**.
+   שנו את **Signing Mode** ל-**Unsigned**, שמרו, והעתיקו את שם ה-preset
+   (שמרו את השם — תצטרכו אותו בשלב 3).
+
+### 3. חיבור ל-GitHub Pages
 
 1. בריפו הזה: **Settings → Secrets and variables → Actions → New repository
-   secret**, והוסיפו שישה סודות עם השמות הבאים והערכים שהעתקתם משלב 1:
+   secret**, והוסיפו שבעה סודות עם השמות הבאים:
    - `NEXT_PUBLIC_FIREBASE_API_KEY`
    - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
    - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-   - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
    - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
    - `NEXT_PUBLIC_FIREBASE_APP_ID`
+   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
+   - `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`
 2. **Settings → Pages** → תחת Build and deployment → Source, בחרו
    **GitHub Actions**.
 3. מזגו את הענף הזה ל-`main` (או פשוט דחפו אליו) — ה-workflow
@@ -49,18 +64,20 @@ Firestore, Storage). אחרי ההגדרה החד-פעמית למטה, כל עד
    (בלי צורך בהגדרת CNAME נוסף בריפו הזה).
 
 **זהו.** מעכשיו, כל `git push` ל-`main` מפרסם גרסה מעודכנת אוטומטית — אין
-צורך להריץ שום דבר בעצמכם.
+צורך להריץ שום דבר בעצמכם, ואין עלות בשום שלב.
 
 ## איך זה עובד מתחת למכסה
 
 - **Next.js** (App Router) בנוי במצב `output: "export"` — כלומר `next build`
   מפיק תיקיית `out/` עם קבצי HTML/CSS/JS סטטיים בלבד, בלי שרת Node.js בכלל.
 - **GitHub Actions** (`.github/workflows/deploy.yml`) מריץ `npm run build`
-  עם משתני הסביבה הציבוריים (config של Firebase) מוזרקים מה-Secrets, ומעלה
-  את `out/` ל-GitHub Pages דרך `actions/deploy-pages`.
-- **Firebase** הוא הבאקאנד היחיד: Authentication (Google), Firestore
-  (מסד הנתונים) ו-Storage (תמונות/הקלטות). האבטחה נאכפת ע"י חוקי Firestore/
-  Storage Rules (בריפו: `firestore.rules`, `storage.rules`) — לא ע"י שרת.
+  עם משתני הסביבה הציבוריים (config של Firebase/Cloudinary) מוזרקים
+  מה-Secrets, ומעלה את `out/` ל-GitHub Pages דרך `actions/deploy-pages`.
+- **Firebase Authentication + Firestore** — התחברות עם Google ומסד הנתונים,
+  שניהם חינמיים במלואם בתוכנית Spark. האבטחה נאכפת ע"י חוקי Firestore Rules
+  (בריפו: `firestore.rules`) — לא ע"י שרת.
+- **Cloudinary** — אחסון קבצים (תמונות, הקלטת סיפור חיים) דרך unsigned upload
+  preset, ישירות מהדפדפן. חינמי, בלי כרטיס אשראי, בניגוד ל-Firebase Storage.
 
 ### הערה טכנית: כתובות הדפים
 
@@ -73,18 +90,18 @@ Firestore, Storage). אחרי ההגדרה החד-פעמית למטה, כל עד
 
 ## מבנה הפרויקט
 
-- `src/lib/firebase.ts` — אתחול Firebase client SDK (Auth/Firestore/Storage).
+- `src/lib/firebase.ts` — אתחול Firebase client SDK (Auth + Firestore).
+- `src/lib/cloudinary.ts` — העלאת קבצים (unsigned upload) ל-Cloudinary.
 - `src/lib/use-auth.ts` — hook להתחברות/התנתקות עם Google.
-- `src/lib/memorials.ts` — כל פעולות ה-CRUD מול Firestore/Storage (יצירה,
-  עריכה, מחיקה, העלאת תמונות/הקלטה, קיר נרות).
+- `src/lib/memorials.ts` — כל פעולות ה-CRUD מול Firestore + Cloudinary
+  (יצירה, עריכה, מחיקה, העלאת תמונות/הקלטה, קיר נרות).
 - `src/lib/hebrew-date.ts` — המרת תאריכים לועזי/עברי וחישוב יום השנה הבא
   (יארצייט) באמצעות [`@hebcal/core`](https://github.com/hebcal/hebcal-es6).
 - `src/components/memorial/` — כל הרכיבים של דף ההנצחה הציבורי (נר, תעודת
   זהות, סיפור חיים, מדיה, תהילים, יום השנה, מצבה, שיתוף, ברקוד).
 - `src/app/` — הדפים: `/` (נחיתה), `/dashboard` (הדפים שלי), `/create`
   (יצירת דף), `/memorial` (דף הנצחה ציבורי, `?slug=`), `/memorial/edit`.
-- `firestore.rules`, `storage.rules`, `firestore.indexes.json` — חוקי אבטחה
-  ואינדקסים ל-Firestore/Storage.
+- `firestore.rules`, `firestore.indexes.json` — חוקי אבטחה ואינדקסים ל-Firestore.
 - `.github/workflows/deploy.yml` — בנייה ופרסום אוטומטיים ל-GitHub Pages.
 
 ## תכונות עיקריות
@@ -107,7 +124,7 @@ Firestore, Storage). אחרי ההגדרה החד-פעמית למטה, כל עד
 
 ```bash
 cp .env.example .env
-# ערכו את .env והדביקו את פרטי ה-Firebase config (או הפעילו אמולטורים, ראו למטה)
+# ערכו את .env והדביקו את פרטי ה-Firebase/Cloudinary config (או הפעילו אמולטורים, ראו למטה)
 npm install
 npm run dev
 ```
@@ -115,10 +132,11 @@ npm run dev
 האתר ירוץ בכתובת `http://localhost:3000/zikaron`.
 
 לפיתוח בלי לגעת בפרויקט ה-Firebase האמיתי, אפשר להריץ מול
-[Firebase Local Emulator Suite](https://firebase.google.com/docs/emulator-suite):
+[Firebase Local Emulator Suite](https://firebase.google.com/docs/emulator-suite)
+(Auth + Firestore בלבד — אין אמולטור ל-Cloudinary):
 
 ```bash
-firebase emulators:start --only auth,firestore,storage
+firebase emulators:start --only auth,firestore
 ```
 
 ואז ב-`.env` הגדירו `NEXT_PUBLIC_USE_FIREBASE_EMULATORS="true"` (יש לבנות
