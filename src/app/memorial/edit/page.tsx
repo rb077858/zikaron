@@ -100,7 +100,7 @@ function EditMemorialPageInner() {
             lifeStory: memorial.lifeStory ?? "",
             videoUrl: memorial.videoUrl ?? "",
             graveMapUrl: memorial.graveMapUrl ?? "",
-            tehilimChapter: memorial.tehilimChapter ?? 100,
+            tehilimChapter: memorial.tehilimChapter ?? undefined,
           }}
           initialCoverUrl={memorial.coverPhotoUrl}
           initialGraveImageUrl={memorial.graveImageUrl}

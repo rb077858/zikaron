@@ -46,7 +46,7 @@ const empty: MemorialFormInput = {
   lifeStory: "",
   videoUrl: "",
   graveMapUrl: "",
-  tehilimChapter: 100,
+  tehilimChapter: undefined,
 };
 
 function Field({
@@ -79,6 +79,9 @@ export function MemorialForm({
   const { user } = useCurrentUser();
   const router = useRouter();
   const [fields, setFields] = useState<MemorialFormInput>(initial ?? empty);
+  const [includeTehilim, setIncludeTehilim] = useState(
+    typeof initial?.tehilimChapter === "number"
+  );
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [graveFile, setGraveFile] = useState<File | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -119,12 +122,16 @@ export function MemorialForm({
     setError(null);
     setSubmitting(true);
     try {
+      const payload: MemorialFormInput = {
+        ...fields,
+        tehilimChapter: includeTehilim ? fields.tehilimChapter || 100 : undefined,
+      };
       let targetSlug = slug;
       if (mode === "create") {
         const idToken = await user.getIdToken();
-        targetSlug = await createMemorialViaWorker(idToken, fields);
+        targetSlug = await createMemorialViaWorker(idToken, payload);
       } else if (targetSlug) {
-        await updateMemorial(targetSlug, fields);
+        await updateMemorial(targetSlug, payload);
       }
       if (!targetSlug) throw new Error("NO_SLUG");
 
@@ -295,16 +302,34 @@ export function MemorialForm({
           </Field>
         </div>
         <div className="mt-4">
-          <Field label="פרק תהילים מוקדש (1–150)">
+          <label className="flex items-center gap-2.5 text-sm font-medium text-muted">
             <input
-              type="number"
-              min={1}
-              max={150}
-              className={`${inputClass} w-28`}
-              value={fields.tehilimChapter}
-              onChange={(e) => update("tehilimChapter", Number(e.target.value))}
+              type="checkbox"
+              checked={includeTehilim}
+              onChange={(e) => {
+                setIncludeTehilim(e.target.checked);
+                if (e.target.checked && !fields.tehilimChapter) {
+                  update("tehilimChapter", 100);
+                }
+              }}
+              className="size-4 accent-gold"
             />
-          </Field>
+            הוספת פרק תהילים מוקדש לדף (אופציונלי)
+          </label>
+          {includeTehilim && (
+            <div className="mt-3">
+              <Field label="מספר הפרק (1–150)">
+                <input
+                  type="number"
+                  min={1}
+                  max={150}
+                  className={`${inputClass} w-28`}
+                  value={fields.tehilimChapter ?? 100}
+                  onChange={(e) => update("tehilimChapter", Number(e.target.value))}
+                />
+              </Field>
+            </div>
+          )}
         </div>
       </section>
 

@@ -79,20 +79,39 @@ export function CandleSection({
       </div>
 
       {candles.length > 0 && (
-        <div className="mx-auto mt-14 flex max-w-lg flex-col gap-4">
-          {candles.map((c) => (
-            <div key={c.id} className="section-card rounded-xl px-5 py-4 text-right">
-              {c.message && <p className="mb-3 leading-7 text-foreground/90">{c.message}</p>}
-              <div className="gold-divider mb-3" />
-              <p className="font-bold text-gold-soft">{c.name}</p>
-              {c.createdAt && (
-                <p className="mt-1 text-xs text-muted">
-                  הדליק/ה נר ב-{formatGregorianDateHe(c.createdAt.toDate())} |{" "}
-                  {formatTimeHe(c.createdAt.toDate())}
-                </p>
-              )}
-            </div>
-          ))}
+        <div className="mx-auto mt-14 max-w-lg">
+          <div className="mb-6 flex items-center justify-center gap-3">
+            <div className="gold-divider flex-1" />
+            <span className="text-sm font-medium text-muted">
+              {candles.length} נרות דלוקים לזכרו/ה
+            </span>
+            <div className="gold-divider flex-1" />
+          </div>
+          <div className="flex flex-col gap-4">
+            {candles.map((c) => (
+              <div
+                key={c.id}
+                className="section-card group flex items-start gap-4 rounded-xl px-5 py-4 text-right transition-all hover:border-gold/50 hover:shadow-[0_0_24px_rgba(212,175,106,0.12)]"
+              >
+                <div className="shrink-0 pt-1">
+                  <CandleFlame size={26} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  {c.message && (
+                    <p className="mb-3 leading-7 text-foreground/90">{c.message}</p>
+                  )}
+                  <div className="gold-divider mb-3" />
+                  <p className="font-bold text-gold-soft">{c.name}</p>
+                  {c.createdAt && (
+                    <p className="mt-1 text-xs text-muted">
+                      הדליק/ה נר ב-{formatGregorianDateHe(c.createdAt.toDate())} |{" "}
+                      {formatTimeHe(c.createdAt.toDate())}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>
