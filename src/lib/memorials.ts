@@ -38,7 +38,7 @@ export type Memorial = {
   coverPhotoUrl?: string | null;
   graveImageUrl?: string | null;
   graveMapUrl?: string | null;
-  tehilimChapter?: number;
+  tehilimChapter?: number | null;
   published: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -107,7 +107,7 @@ export async function updateMemorial(
     lifeStory: fields.lifeStory || null,
     videoUrl: fields.videoUrl || null,
     graveMapUrl: fields.graveMapUrl || null,
-    tehilimChapter: fields.tehilimChapter || 100,
+    tehilimChapter: typeof fields.tehilimChapter === "number" ? fields.tehilimChapter : null,
     updatedAt: serverTimestamp(),
   });
 }

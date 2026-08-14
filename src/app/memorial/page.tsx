@@ -23,6 +23,7 @@ import { YahrzeitSection } from "@/components/memorial/YahrzeitSection";
 import { GraveSection } from "@/components/memorial/GraveSection";
 import { ShareRow } from "@/components/memorial/ShareRow";
 import { QrCodeCard } from "@/components/memorial/QrCodeCard";
+import { youtubeEmbedUrl } from "@/lib/youtube";
 
 function MemorialPageInner() {
   const slug = useSearchParams().get("slug") ?? "";
@@ -69,20 +70,22 @@ function MemorialPageInner() {
 
   const fullName = `${memorial.firstName} ${memorial.lastName}`;
   const isOwner = user?.uid === memorial.ownerId;
+  const hasTehilim = !!memorial.tehilimChapter;
+  const hasMedia = photos.length > 0 || !!(memorial.videoUrl && youtubeEmbedUrl(memorial.videoUrl));
 
   return (
     <div className="flex min-h-screen flex-col">
       <HeroHeader memorial={memorial} />
-      <PublicNav />
+      <PublicNav hasTehilim={hasTehilim} hasMedia={hasMedia} />
 
       <main className="flex-1">
-        <CandleSection memorial={memorial} fullName={fullName} candles={candles} />
         <IdCardSection memorial={memorial} />
         <LifeStorySection memorial={memorial} />
         <TehilimSection chapter={memorial.tehilimChapter} />
         <MediaSection memorial={memorial} photos={photos} />
         <YahrzeitSection memorial={memorial} />
         <GraveSection memorial={memorial} />
+        <CandleSection memorial={memorial} fullName={fullName} candles={candles} />
         <ShareRow slug={slug} fullName={fullName} />
 
         {isOwner && (

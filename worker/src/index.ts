@@ -63,6 +63,12 @@ function optString(v: unknown): FSValue {
   return typeof v === "string" && v.trim() ? fsString(v.trim()) : fsNull();
 }
 
+function optChapter(v: unknown): FSValue {
+  return typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 150
+    ? fsInt(v)
+    : fsNull();
+}
+
 async function handleCreateMemorial(request: Request, env: Env): Promise<Response> {
   const token = getBearerToken(request);
   if (!token) return json(env, { error: "UNAUTHENTICATED" }, 401);
@@ -141,7 +147,7 @@ async function handleCreateMemorial(request: Request, env: Env): Promise<Respons
             coverPhotoUrl: fsNull(),
             graveImageUrl: fsNull(),
             graveMapUrl: optString(body.graveMapUrl),
-            tehilimChapter: fsInt(body.tehilimChapter || 100),
+            tehilimChapter: optChapter(body.tehilimChapter),
             published: fsBool(true),
             createdAt: fsTimestamp(new Date()),
             updatedAt: fsTimestamp(new Date()),
