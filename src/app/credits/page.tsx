@@ -5,7 +5,21 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { useCurrentUser, signInWithGoogle } from "@/lib/use-auth";
-import { subscribeToCredits, purchaseCreditsViaWorker, CREDITS_PER_MEMORIAL } from "@/lib/credits";
+import {
+  subscribeToCredits,
+  purchaseCreditsViaWorker,
+  CREDITS_PER_MEMORIAL,
+  WorkerRequestError,
+} from "@/lib/credits";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  PAYMENT_CAPTURE_FAILED:
+    "PayPal לא אישר את התשלום. אם אתם בודקים עם חשבון Sandbox, ודאו שה-Worker מוגדר גם הוא לסביבת Sandbox (לא ניתן לתפוס הזמנת Sandbox מול ה-API החי, ולהפך).",
+  AMOUNT_MISMATCH: "הסכום שאושר ב-PayPal לא תואם את מספר הקרדיטים המבוקש.",
+  INVALID_INPUT: "בקשה לא תקינה.",
+  UNAUTHENTICATED: "יש להתחבר מחדש ולנסות שוב.",
+  INVALID_TOKEN: "יש להתחבר מחדש ולנסות שוב.",
+};
 
 const PRESETS = [10, 25, 50, 100];
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
@@ -151,7 +165,12 @@ export default function CreditsPage() {
                     } catch (err) {
                       console.error(err);
                       setStatus("error");
-                      setStatusMessage("התשלום התקבל אך זקיפת הקרדיטים נכשלה. פנו אלינו לבירור.");
+                      const message =
+                        err instanceof WorkerRequestError
+                          ? ERROR_MESSAGES[err.code] ??
+                            "התשלום התקבל אך זקיפת הקרדיטים נכשלה. פנו אלינו לבירור."
+                          : "התשלום התקבל אך זקיפת הקרדיטים נכשלה. פנו אלינו לבירור.";
+                      setStatusMessage(message);
                     }
                   }}
                   onError={(err) => {
