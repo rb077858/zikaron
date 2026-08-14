@@ -15,6 +15,7 @@ import {
 import { HeroHeader } from "@/components/memorial/HeroHeader";
 import { PublicNav } from "@/components/memorial/PublicNav";
 import { CandleSection } from "@/components/memorial/CandleSection";
+import { CandleWall } from "@/components/memorial/CandleWall";
 import { IdCardSection } from "@/components/memorial/IdCardSection";
 import { LifeStorySection } from "@/components/memorial/LifeStorySection";
 import { TehilimSection } from "@/components/memorial/TehilimSection";
@@ -85,7 +86,7 @@ function MemorialPageInner() {
         <MediaSection memorial={memorial} photos={photos} />
         <YahrzeitSection memorial={memorial} />
         <GraveSection memorial={memorial} />
-        <CandleSection memorial={memorial} fullName={fullName} candles={candles} />
+        <CandleSection memorial={memorial} fullName={fullName} candlesCount={candles.length} />
         <ShareRow slug={slug} fullName={fullName} />
 
         {isOwner && (
@@ -112,6 +113,8 @@ function MemorialPageInner() {
           </Link>
         </p>
       </footer>
+
+      <CandleWall candles={candles} fullName={fullName} />
     </div>
   );
 }
