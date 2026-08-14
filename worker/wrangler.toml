@@ -7,7 +7,14 @@ compatibility_date = "2025-01-01"
 # here, since this file is committed to the repo.
 [vars]
 FIREBASE_PROJECT_ID = "zikaron-93b28"
+# NOTE: PAYPAL_CLIENT_ID below is a Sandbox client ID (for testing) — its
+# matching PAYPAL_API_BASE must point at the Sandbox API, and the
+# PAYPAL_CLIENT_SECRET GitHub secret must be the Sandbox app's secret too.
+# A Sandbox-created order can never be captured against the Live API (or
+# vice versa) — capture will always fail with a mismatch between them.
+# When ready for real payments, switch all three (this ID, this API base,
+# and the PAYPAL_CLIENT_SECRET secret) to your Live app's values together.
 PAYPAL_CLIENT_ID = "BAA4PG252EdLwWe2ZWOabokXTYBSjIjxuNBumFJSSutiMHcQNHFirS1nArd2iArOdOPO37vXFgK49kV_e8"
-PAYPAL_API_BASE = "https://api-m.paypal.com"
+PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com"
 ADMIN_EMAIL = "rb077858@gmail.com"
 ALLOWED_ORIGIN = "https://r.is-cool.dev"

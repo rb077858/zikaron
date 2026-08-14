@@ -29,6 +29,18 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+/**
+ * Any other non-OK response from the Worker — e.g. a failed PayPal capture,
+ * an amount mismatch, or an auth problem. `code` is the Worker's raw error
+ * string (see worker/src/index.ts) so callers can show a specific message
+ * instead of a generic one.
+ */
+export class WorkerRequestError extends Error {
+  constructor(public code: string, public status: number) {
+    super(code);
+  }
+}
+
 async function workerFetch(path: string, idToken: string, body: unknown) {
   if (!WORKER_URL) {
     throw new Error(
@@ -45,10 +57,15 @@ async function workerFetch(path: string, idToken: string, body: unknown) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 402) {
+    const code = (data as { error?: string }).error || `HTTP_${res.status}`;
+    // INSUFFICIENT_CREDITS is specifically the create-memorial rejection —
+    // other endpoints (e.g. purchase-credits, on a failed PayPal capture)
+    // can also return 402, and that is NOT a credits-balance problem, so
+    // this must check the error code, not just the status.
+    if (res.status === 402 && code === "INSUFFICIENT_CREDITS") {
       throw new InsufficientCreditsError((data as { credits?: number }).credits ?? 0);
     }
-    throw new Error((data as { error?: string }).error || `Request failed (${res.status})`);
+    throw new WorkerRequestError(code, res.status);
   }
   return data;
 }
