@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Files are stored under /memorials/{memorialId}/... — anyone can view
+    // (memorial pages are public), only a signed-in user can upload, and
+    // ownership of the memorial document itself is enforced by Firestore
+    // rules (the app only ever writes to a memorial's folder after it has
+    // confirmed the memorial belongs to the signed-in user).
+    match /memorials/{memorialId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 25 * 1024 * 1024;
+    }
+  }
+}

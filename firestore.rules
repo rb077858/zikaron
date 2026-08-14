@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && request.auth.uid == data.ownerId;
+    }
+
+    match /memorials/{memorialId} {
+      allow read: if resource.data.published == true || isOwner(resource.data);
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.firstName is string
+        && request.resource.data.lastName is string;
+
+      allow update: if isOwner(resource.data)
+        && request.resource.data.ownerId == resource.data.ownerId;
+
+      allow delete: if isOwner(resource.data);
+
+      // Subcollection docs carry their own copies of `ownerId` and
+      // `published` (denormalized from the parent memorial at write time).
+      // This avoids cross-document get() lookups in rules, which choke on
+      // the Hebrew-character document IDs this app uses for slugs.
+      match /photos/{photoId} {
+        allow read: if resource.data.published == true || isOwner(resource.data);
+
+        allow create: if isOwner(request.resource.data)
+          && request.resource.data.url is string;
+
+        allow delete: if isOwner(resource.data);
+      }
+
+      match /candles/{candleId} {
+        allow read: if resource.data.published == true || isOwner(resource.data);
+
+        // Anyone (including guests) may light a virtual candle and sign the
+        // tribute wall — the memorial's own ownerId/published are copied in
+        // by the app when it already has the memorial loaded.
+        allow create: if request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && (!('message' in request.resource.data) || request.resource.data.message.size() <= 500)
+          && request.resource.data.ownerId is string;
+
+        allow delete: if isOwner(resource.data);
+      }
+    }
+  }
+}

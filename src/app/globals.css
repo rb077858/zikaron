@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0b0d;
+  --surface: #17171b;
+  --surface-2: #1f1f24;
+  --foreground: #f5f0e6;
+  --muted: #a6a2ab;
+  --gold: #d4af6a;
+  --gold-soft: #e9c98a;
+  --flame: #ff9a3c;
+  --border: #2a2a30;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-flame: var(--flame);
+  --color-border: var(--border);
+  --font-sans: var(--font-heebo);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-heebo), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--gold);
+  color: #1a1206;
+}
+
+/* Flickering memorial candle, used across the site */
+@keyframes flame-flicker {
+  0%,
+  100% {
+    transform: scaleY(1) rotate(-1deg);
+    filter: drop-shadow(0 0 10px rgba(255, 154, 60, 0.65));
+  }
+  25% {
+    transform: scaleY(1.05) rotate(1deg);
+  }
+  50% {
+    transform: scaleY(0.97) rotate(-2deg);
+    filter: drop-shadow(0 0 16px rgba(255, 154, 60, 0.85));
+  }
+  75% {
+    transform: scaleY(1.02) rotate(2deg);
+  }
+}
+
+.candle-flame {
+  animation: flame-flicker 2.6s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.gold-divider {
+  background: linear-gradient(
+    to left,
+    transparent,
+    var(--gold) 20%,
+    var(--gold) 80%,
+    transparent
+  );
+  height: 1px;
+}
+
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.scroll-mt-nav {
+  scroll-margin-top: 6rem;
+}
