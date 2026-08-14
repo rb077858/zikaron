@@ -7,7 +7,7 @@ compatibility_date = "2025-01-01"
 # here, since this file is committed to the repo.
 [vars]
 FIREBASE_PROJECT_ID = "zikaron-93b28"
-PAYPAL_CLIENT_ID = "BAARIIw9kEcq8PDhNHl2_Ux39l3Ay9nBt_DHJq7TE0rJGoMcxTBP5SF6uQpXuWBOk3AhE9a7qjpD8Ljnvc"
+PAYPAL_CLIENT_ID = "BAA4PG252EdLwWe2ZWOabokXTYBSjIjxuNBumFJSSutiMHcQNHFirS1nArd2iArOdOPO37vXFgK49kV_e8"
 PAYPAL_API_BASE = "https://api-m.paypal.com"
 ADMIN_EMAIL = "rb077858@gmail.com"
 ALLOWED_ORIGIN = "https://r.is-cool.dev"
