@@ -11,7 +11,6 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
-  runTransaction,
   writeBatch,
   Timestamp,
   type Unsubscribe,
@@ -84,87 +83,11 @@ export type MemorialFormInput = {
   tehilimChapter?: number;
 };
 
-// Firestore's security-rules engine does not reliably evaluate `resource.data`
-// for documents whose ID contains Hebrew characters, so slugs (which are used
-// as the Firestore document ID) are transliterated to ASCII. This also keeps
-// shared links/QR codes free of percent-encoding.
-const HEBREW_TRANSLITERATION: Record<string, string> = {
-  א: "", ב: "b", ג: "g", ד: "d", ה: "h", ו: "v", ז: "z", ח: "ch", ט: "t",
-  י: "y", כ: "k", ך: "k", ל: "l", מ: "m", ם: "m", נ: "n", ן: "n", ס: "s",
-  ע: "", פ: "p", ף: "p", צ: "tz", ץ: "tz", ק: "k", ר: "r", ש: "sh", ת: "t",
-};
-
-function transliterate(text: string): string {
-  return Array.from(text)
-    .map((ch) => HEBREW_TRANSLITERATION[ch] ?? ch)
-    .join("");
-}
-
-function slugify(firstName: string, lastName: string): string {
-  const raw = transliterate(`${firstName}-${lastName}`.trim());
-  const slug = raw
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-  return slug || `memorial-${Date.now().toString(36)}`;
-}
-
-export async function generateUniqueSlug(
-  firstName: string,
-  lastName: string
-): Promise<string> {
-  const base = slugify(firstName, lastName);
-  let candidate = base;
-  let attempt = 1;
-  while ((await getDoc(doc(db, "memorials", candidate))).exists()) {
-    attempt += 1;
-    candidate = `${base}-${attempt}`;
-  }
-  return candidate;
-}
-
-export async function createMemorial(
-  ownerId: string,
-  ownerEmail: string | null | undefined,
-  fields: MemorialFormInput
-): Promise<string> {
-  const slug = await generateUniqueSlug(fields.firstName, fields.lastName);
-
-  await runTransaction(db, async (tx) => {
-    const ref_ = doc(db, "memorials", slug);
-    const snap = await tx.get(ref_);
-    if (snap.exists()) {
-      throw new Error("SLUG_TAKEN");
-    }
-    tx.set(ref_, {
-      slug,
-      ownerId,
-      ownerEmail: ownerEmail ?? null,
-      firstName: fields.firstName,
-      lastName: fields.lastName,
-      fatherName: fields.fatherName || null,
-      motherName: fields.motherName || null,
-      spouseName: fields.spouseName || null,
-      childrenNames: fields.childrenNames || null,
-      occupation: fields.occupation || null,
-      burialPlace: fields.burialPlace || null,
-      birthDate: fields.birthDate,
-      deathDate: fields.deathDate,
-      lifeStory: fields.lifeStory || null,
-      lifeStoryAudioUrl: null,
-      videoUrl: fields.videoUrl || null,
-      coverPhotoUrl: null,
-      graveImageUrl: null,
-      graveMapUrl: fields.graveMapUrl || null,
-      tehilimChapter: fields.tehilimChapter || 100,
-      published: true,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
-
-  return slug;
-}
+// Memorial creation (slug generation, credit deduction, admin bypass) is
+// handled entirely by the Cloudflare Worker now — see credits.ts's
+// createMemorialViaWorker(). It can't be a direct client→Firestore write
+// (firestore.rules denies it) since the client can't be trusted to actually
+// pay before creating a page.
 
 export async function updateMemorial(
   slug: string,

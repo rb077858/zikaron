@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Cloudflare Worker is a separate project with its own tooling
+    // (worker/tsc typecheck) — it isn't part of this Next.js app's lint scope.
+    "worker/**",
   ]),
 ]);
 

@@ -13,18 +13,21 @@ service cloud.firestore {
 
     match /memorials/{memorialId} {
       // `resource == null` covers reads of a document that doesn't exist yet
-      // (e.g. checking whether a candidate slug is free before creating a
-      // page) — without it, `resource.data` errors on a null resource and
-      // the read is denied, even though nothing sensitive is being exposed.
+      // — without it, `resource.data` errors on a null resource and the
+      // read is denied, even though nothing sensitive is being exposed.
       allow read: if resource == null
         || resource.data.published == true
         || isOwner(resource.data);
 
-      allow create: if isSignedIn()
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.firstName is string
-        && request.resource.data.lastName is string;
+      // Creating a memorial costs credits (or is free for the admin
+      // account) — that can't be safely enforced from the browser (a client
+      // could just skip the "pay" step), so only the trusted Cloudflare
+      // Worker creates memorials, using its own service-account credentials
+      // which bypass these rules entirely. Direct client writes are denied.
+      allow create: if false;
 
+      // Editing and deleting stay free, direct, owner-only operations —
+      // no money involved, so no need to route them through the Worker.
       allow update: if isOwner(resource.data)
         && request.resource.data.ownerId == resource.data.ownerId;
 
@@ -57,6 +60,17 @@ service cloud.firestore {
 
         allow delete: if isOwner(resource.data);
       }
+    }
+
+    // Credit balances. Only ever written by the trusted Cloudflare Worker
+    // (via a Google service account, which bypasses these rules the same
+    // way the Admin SDK would) — after it verifies a real PayPal payment,
+    // or when it creates a memorial on the admin's behalf. The browser can
+    // read its own balance but can never write it directly; otherwise
+    // anyone could grant themselves free credits from dev tools.
+    match /users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
     }
   }
 }

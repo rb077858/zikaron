@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/lib/use-auth";
 import {
-  createMemorial,
   updateMemorial,
   uploadCoverPhoto,
   uploadGraveImage,
@@ -14,6 +14,13 @@ import {
   type MemorialFormInput,
   type Photo,
 } from "@/lib/memorials";
+import {
+  createMemorialViaWorker,
+  subscribeToCredits,
+  InsufficientCreditsError,
+  CREDITS_PER_MEMORIAL,
+  ADMIN_EMAIL,
+} from "@/lib/credits";
 
 type Props = {
   mode: "create" | "edit";
@@ -79,7 +86,16 @@ export function MemorialForm({
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos ?? []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
+  useEffect(() => {
+    if (mode !== "create" || !user) return;
+    const unsub = subscribeToCredits(user.uid, setCredits);
+    return () => unsub();
+  }, [mode, user]);
 
   function update<K extends keyof MemorialFormInput>(key: K, value: MemorialFormInput[K]) {
     setFields((f) => ({ ...f, [key]: value }));
@@ -105,7 +121,8 @@ export function MemorialForm({
     try {
       let targetSlug = slug;
       if (mode === "create") {
-        targetSlug = await createMemorial(user.uid, user.email, fields);
+        const idToken = await user.getIdToken();
+        targetSlug = await createMemorialViaWorker(idToken, fields);
       } else if (targetSlug) {
         await updateMemorial(targetSlug, fields);
       }
@@ -123,11 +140,21 @@ export function MemorialForm({
 
       router.push(`/memorial?slug=${encodeURIComponent(targetSlug)}`);
     } catch (err) {
-      console.error(err);
-      setError("משהו השתבש בשמירה. נסו שוב.");
+      if (err instanceof InsufficientCreditsError) {
+        setError(
+          `אין מספיק קרדיטים ליצירת דף (יש לכם ${err.credits}, נדרשים ${CREDITS_PER_MEMORIAL}). ` +
+            `אפשר לרכוש קרדיטים בעמוד הקרדיטים.`
+        );
+      } else {
+        console.error(err);
+        setError("משהו השתבש בשמירה. נסו שוב.");
+      }
       setSubmitting(false);
     }
   }
+
+  const notEnoughCredits =
+    mode === "create" && !isAdmin && credits !== null && credits < CREDITS_PER_MEMORIAL;
 
   async function handleDeletePhoto(photo: Photo) {
     if (!slug) return;
@@ -361,9 +388,38 @@ export function MemorialForm({
         </div>
       </section>
 
+      {mode === "create" && (
+        <div className="section-card rounded-2xl p-6 text-center">
+          {isAdmin ? (
+            <p className="text-sm text-gold-soft">חשבון מנהל — יצירת דפים ללא הגבלה וללא עלות.</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted">
+                יצירת דף עולה <span className="font-bold text-gold-soft">{CREDITS_PER_MEMORIAL} קרדיטים</span>.
+                {credits !== null && (
+                  <> יתרתכם הנוכחית: <span className="font-bold text-foreground">{credits}</span>.</>
+                )}
+              </p>
+              <p className="mt-1 text-xs text-muted">עריכת דף לאחר יצירתו היא תמיד חינמית.</p>
+              {notEnoughCredits && (
+                <div className="mt-3 flex flex-col items-center gap-2">
+                  <p className="text-sm text-red-400">אין לכם מספיק קרדיטים ליצירת דף.</p>
+                  <Link
+                    href="/credits"
+                    className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors"
+                  >
+                    רכישת קרדיטים
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || notEnoughCredits}
         className="rounded-full bg-gold px-6 py-3 text-base font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors disabled:opacity-60"
       >
         {submitting ? "שומר..." : mode === "create" ? "יצירת דף ההנצחה" : "שמירת שינויים"}
