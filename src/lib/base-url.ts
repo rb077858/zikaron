@@ -11,5 +11,5 @@ export function withBasePath(p: string): string {
 export function memorialAbsoluteUrl(slug: string): string {
   const site =
     process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000" + BASE_PATH;
-  return `${site.replace(/\/$/, "")}/memorial/${encodeURIComponent(slug)}`;
+  return `${site.replace(/\/$/, "")}/memorial?slug=${encodeURIComponent(slug)}`;
 }

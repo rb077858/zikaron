@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCurrentUser } from "@/lib/use-auth";
 import {
   subscribeToMemorial,
@@ -23,33 +24,32 @@ import { GraveSection } from "@/components/memorial/GraveSection";
 import { ShareRow } from "@/components/memorial/ShareRow";
 import { QrCodeCard } from "@/components/memorial/QrCodeCard";
 
-export default function MemorialPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = use(params);
+function MemorialPageInner() {
+  const slug = useSearchParams().get("slug") ?? "";
   const { user } = useCurrentUser();
   const [memorial, setMemorial] = useState<Memorial | null | undefined>(undefined);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [candles, setCandles] = useState<Candle[]>([]);
 
   useEffect(() => {
+    if (!slug) return;
     const unsub = subscribeToMemorial(slug, setMemorial);
     return () => unsub();
   }, [slug]);
 
   useEffect(() => {
+    if (!slug) return;
     const unsub = subscribeToPhotos(slug, setPhotos);
     return () => unsub();
   }, [slug]);
 
   useEffect(() => {
+    if (!slug) return;
     const unsub = subscribeToCandles(slug, setCandles);
     return () => unsub();
   }, [slug]);
 
-  if (memorial === undefined) {
+  if (!slug || memorial === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted">טוען...</div>
     );
@@ -91,7 +91,7 @@ export default function MemorialPage({
               <p className="text-sm text-muted">כלים לבעל/ת הדף</p>
               <QrCodeCard slug={slug} fullName={fullName} />
               <Link
-                href={`/memorial/${slug}/edit`}
+                href={`/memorial/edit?slug=${encodeURIComponent(slug)}`}
                 className="rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:border-gold hover:text-gold-soft transition-colors"
               >
                 ✏️ עריכת דף ההנצחה
@@ -110,5 +110,17 @@ export default function MemorialPage({
         </p>
       </footer>
     </div>
+  );
+}
+
+export default function MemorialPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-muted">טוען...</div>
+      }
+    >
+      <MemorialPageInner />
+    </Suspense>
   );
 }

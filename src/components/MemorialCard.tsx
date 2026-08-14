@@ -49,7 +49,7 @@ export function MemorialCard({
 
   return (
     <div className="section-card overflow-hidden rounded-2xl">
-      <Link href={`/memorial/${memorial.slug}`} className="block">
+      <Link href={`/memorial?slug=${encodeURIComponent(memorial.slug)}`} className="block">
         <div className="flex h-40 items-center justify-center overflow-hidden bg-surface-2">
           {memorial.coverPhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -65,7 +65,7 @@ export function MemorialCard({
       </Link>
 
       <div className="p-4">
-        <Link href={`/memorial/${memorial.slug}`}>
+        <Link href={`/memorial?slug=${encodeURIComponent(memorial.slug)}`}>
           <h3 className="text-lg font-bold text-gold-soft hover:underline">
             {memorial.firstName} {memorial.lastName}
           </h3>
@@ -76,7 +76,7 @@ export function MemorialCard({
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
           <Link
-            href={`/memorial/${memorial.slug}/edit`}
+            href={`/memorial/edit?slug=${encodeURIComponent(memorial.slug)}`}
             className="rounded-full border border-border px-3 py-1.5 hover:border-gold hover:text-gold-soft transition-colors"
           >
             עריכה

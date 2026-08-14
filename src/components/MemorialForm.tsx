@@ -121,7 +121,7 @@ export function MemorialForm({
         });
       }
 
-      router.push(`/memorial/${targetSlug}`);
+      router.push(`/memorial?slug=${encodeURIComponent(targetSlug)}`);
     } catch (err) {
       console.error(err);
       setError("משהו השתבש בשמירה. נסו שוב.");
