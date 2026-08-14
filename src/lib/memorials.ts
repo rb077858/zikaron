@@ -190,8 +190,16 @@ export async function updateMemorial(
 }
 
 export async function deleteMemorial(slug: string): Promise<void> {
-  const photosSnap = await getDocs(collection(db, "memorials", slug, "photos"));
-  const candlesSnap = await getDocs(collection(db, "memorials", slug, "candles"));
+  // Firestore rejects `list` queries outright unless a `where` filter lets it
+  // prove the security rule holds without fetching each document — an
+  // unfiltered collection read here would fail with permission-denied even
+  // for the owner. Every doc is published, so this filter always matches.
+  const photosSnap = await getDocs(
+    query(collection(db, "memorials", slug, "photos"), where("published", "==", true))
+  );
+  const candlesSnap = await getDocs(
+    query(collection(db, "memorials", slug, "candles"), where("published", "==", true))
+  );
   const batch = writeBatch(db);
   photosSnap.forEach((d) => batch.delete(d.ref));
   candlesSnap.forEach((d) => batch.delete(d.ref));
