@@ -4,11 +4,19 @@ import Link from "next/link";
 import { CandleFlame } from "@/components/CandleFlame";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { useCurrentUser, signInWithGoogle, signOutUser } from "@/lib/use-auth";
-import { useState } from "react";
+import { subscribeToCredits, ADMIN_EMAIL } from "@/lib/credits";
+import { useEffect, useState } from "react";
 
 export function SiteHeader() {
   const { user, loading } = useCurrentUser();
   const [busy, setBusy] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeToCredits(user.uid, setCredits);
+    return () => unsub();
+  }, [user]);
 
   async function handleSignIn() {
     setBusy(true);
@@ -36,6 +44,14 @@ export function SiteHeader() {
               >
                 דפי ההנצחה שלי
               </Link>
+              {user.email !== ADMIN_EMAIL && (
+                <Link
+                  href="/credits"
+                  className="rounded-full border border-gold/40 px-4 py-1.5 text-sm font-medium text-gold-soft hover:border-gold transition-colors"
+                >
+                  🪙 {credits ?? "…"} קרדיטים
+                </Link>
+              )}
               <button
                 onClick={() => signOutUser()}
                 className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:border-gold transition-colors"

@@ -2,20 +2,23 @@
 
 מערכת ליצירת דפי הנצחה דיגיטליים: התחברות עם Google, יצירת דף הנצחה מלא (פרטים,
 תמונות, סיפור חיים, קיר נרות, יום השנה הבא לפי הלוח העברי) וקבלת קישור + ברקוד
-להדבקה על המצבה.
+להדבקה על המצבה. יצירת דף עולה **5 קרדיטים** (קרדיט = 1 ₪), שנרכשים דרך
+PayPal; עריכת דף קיים תמיד חינמית.
 
-**אין כאן שרת להריץ, ואין עלות.** האתר הוא קובצי HTML/JS סטטיים בלבד,
-שמתארחים ב-GitHub Pages תחת `r.is-cool.dev/zikaron` (חינם). ההתחברות ומסד
-הנתונים רצים ישירות מהדפדפן מול **Firebase Authentication + Firestore**
-(חינמיים לגמרי בתוכנית ה-Spark, בלי צורך בכרטיס אשראי). קבצים (תמונות,
-הקלטות) מועלים ל-**Cloudinary** במקום ל-Firebase Storage — כי Firebase
-Storage דורש שדרוג לתוכנית בתשלום (Blaze) גם לשימוש זעיר, בעוד ל-Cloudinary
-יש תוכנית חינמית אמיתית בלי כרטיס אשראי. אחרי ההגדרה החד-פעמית למטה, כל
-עדכון לאתר הוא סתם `git push` — GitHub Actions בונה ומפרסם אוטומטית.
+**אין כאן שרת להריץ בעצמכם, ותפעול האתר (לא כולל התשלומים ללקוחות) חינמי
+לגמרי.** האתר עצמו הוא קובצי HTML/JS סטטיים, שמתארחים ב-GitHub Pages תחת
+`r.is-cool.dev/zikaron` (חינם). ההתחברות ומסד הנתונים רצים ישירות מהדפדפן מול
+**Firebase Authentication + Firestore** (חינמיים לגמרי בתוכנית ה-Spark, בלי
+כרטיס אשראי). קבצים (תמונות, הקלטות) מועלים ל-**Cloudinary** במקום
+ל-Firebase Storage (שדורש שדרוג בתשלום גם לשימוש זעיר). יצירת דף ורכישת
+קרדיטים עוברות דרך פונקציית **Cloudflare Worker** קטנה וחינמית — הכרחי כדי
+לוודא בצד מהימן (לא בדפדפן, שאפשר לעקוף) שבאמת שולם לפני שנוצר דף, ושתשלום
+PayPal אכן התקבל לפני שנזקפים קרדיטים. אחרי ההגדרה החד-פעמית למטה, כל עדכון
+לאתר הוא סתם `git push` — GitHub Actions בונה ומפרסם הכל אוטומטית.
 
 ## הגדרה חד-פעמית
 
-שלושה חלקים, כולם דרך דפדפן — לא צריך טרמינל בכלל (אלא אם תרצו, ראו הערה בסוף).
+ארבעה חלקים, כולם דרך דפדפן — כמעט ולא צריך טרמינל (יוצא דופן אחד מסומן למטה).
 
 ### 1. פרויקט Firebase (חינם, בלי כרטיס אשראי)
 
@@ -28,25 +31,64 @@ Storage דורש שדרוג לתוכנית בתשלום (Blaze) גם לשימו�
    מהריפו והדביקו שם, ואז Publish.
 5. **Project settings** (גלגל השיניים) → General → Your apps → הוסיפו אפליקציית
    **Web** (סמל `</>`), תנו לה שם, ותעתיקו את ערכי ה-config שמופיעים
-   (`apiKey`, `authDomain`, `projectId`, `messagingSenderId`, `appId`) —
-   תצטרכו אותם בשלב 3.
+   (`apiKey`, `authDomain`, `projectId`, `messagingSenderId`, `appId`).
 
    **חשוב:** אל תפעילו את **Storage** מה-Firebase Console — הוא דורש שדרוג
-   לתוכנית בתשלום (Blaze). אחסון הקבצים באתר הזה קורה דרך Cloudinary (שלב הבא),
-   לא דרך Firebase.
+   בתשלום. אחסון הקבצים באתר הזה קורה דרך Cloudinary, לא Firebase.
+6. עוד ב-Project settings: **Service accounts** → **Generate new private key**
+   → נשמר קובץ JSON. תצטרכו ממנו את `client_email` ואת `private_key` בשלב 3
+   (ה-Worker) — זו הדרך שבה ה-Worker כותב ל-Firestore בלי לעבור דרך חוקי
+   האבטחה (בדיוק כמו Admin SDK). **שמרו את הקובץ הזה בסודיות** ואל תעלו אותו
+   לשום מקום.
 
 ### 2. חשבון Cloudinary (חינם, בלי כרטיס אשראי) — לתמונות והקלטות
 
 1. הרשמו בחינם ב-[cloudinary.com](https://cloudinary.com).
 2. בדף הבית של ה-Dashboard, העתיקו את ה-**Cloud name**.
 3. Settings (גלגל השיניים) → Upload → Upload presets → **Add upload preset**.
-   שנו את **Signing Mode** ל-**Unsigned**, שמרו, והעתיקו את שם ה-preset
-   (שמרו את השם — תצטרכו אותו בשלב 3).
+   שנו את **Signing Mode** ל-**Unsigned**, שמרו, והעתיקו את שם ה-preset.
 
-### 3. חיבור ל-GitHub Pages
+### 3. Cloudflare Worker + PayPal — התשלומים והקרדיטים
 
-1. בריפו הזה: **Settings → Secrets and variables → Actions → New repository
-   secret**, והוסיפו שבעה סודות עם השמות הבאים:
+זהו החלק שמוודא שבאמת שולם לפני שנזקפים קרדיטים או נוצר דף — לא ניתן לעשות
+זאת בבטחה מהדפדפן בלבד (מישהו טכני יכול פשוט לעקוף בדיקת תשלום שרצה בצד
+לקוח).
+
+1. **PayPal**: היכנסו לחשבון ה-PayPal Business שלכם →
+   [developer.paypal.com/dashboard/applications](https://developer.paypal.com/dashboard/applications) →
+   ודאו שאתם במצב **Live** (לא Sandbox) → **Create App**. העתיקו את ה-**Client
+   ID** וה-**Secret**.
+2. **Cloudflare**: הרשמו בחינם ב-[cloudflare.com](https://dash.cloudflare.com/sign-up)
+   (לא נדרש כרטיס אשראי לתוכנית החינמית של Workers). מה-Dashboard העתיקו את
+   ה-**Account ID** (מופיע בסרגל הימני של כל דומיין/של Workers & Pages).
+3. צרו **API Token**: My Profile → API Tokens → Create Token → תבנית "Edit
+   Cloudflare Workers" מספיקה. העתיקו את הטוקן.
+4. בריפו הזה, **Settings → Secrets and variables → Actions → New repository
+   secret**, הוסיפו:
+   - `CLOUDFLARE_API_TOKEN`
+   - `CLOUDFLARE_ACCOUNT_ID`
+   - `PAYPAL_CLIENT_SECRET`
+   - `GOOGLE_SERVICE_ACCOUNT_EMAIL` (מהקובץ JSON משלב 1, שדה `client_email`)
+   - `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` (מהקובץ JSON, שדה `private_key`
+     כולל `-----BEGIN PRIVATE KEY-----` ו-`\n`, בדיוק כפי שהוא)
+5. ערכו את הקובץ [`worker/wrangler.toml`](./worker/wrangler.toml) בריפו
+   (זה כן דורש עריכת קובץ טקסט — הכי קרוב שיש לצעד "לא-דפדפן" כאן) ועדכנו
+   שלושה ערכים לא-סודיים:
+   - `FIREBASE_PROJECT_ID` — ה-Project ID מ-Firebase
+   - `PAYPAL_CLIENT_ID` — מ-PayPal (שלב 1 למעלה)
+   - `ALLOWED_ORIGIN` — נשאר `https://r.is-cool.dev` אם זה הדומיין שלכם
+
+   קומיטו ודחפו את השינוי (או ערכו ישירות בממשק העריכה של GitHub — זה טקסט
+   רגיל, לא סוד).
+6. דחיפה ל-`main` מריצה את
+   [`.github/workflows/deploy-worker.yml`](./.github/workflows/deploy-worker.yml)
+   שמפרסם את ה-Worker אוטומטית ל-`https://zikaron-worker.<your-subdomain>.workers.dev`.
+   את הכתובת הזו רואים בלוג של ה-Action, או ב-Cloudflare Dashboard תחת
+   Workers & Pages.
+
+### 4. חיבור האתר עצמו ל-GitHub Pages
+
+1. באותו מקום (**Settings → Secrets and variables → Actions**), הוסיפו גם:
    - `NEXT_PUBLIC_FIREBASE_API_KEY`
    - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
    - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
@@ -54,6 +96,9 @@ Storage דורש שדרוג לתוכנית בתשלום (Blaze) גם לשימו�
    - `NEXT_PUBLIC_FIREBASE_APP_ID`
    - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
    - `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`
+   - `NEXT_PUBLIC_WORKER_URL` — הכתובת מסעיף 3.6 למעלה
+   - `NEXT_PUBLIC_PAYPAL_CLIENT_ID` — אותו Client ID כמו בסעיף 3.1 (הפעם
+     כ"public" — זה בטוח, זה ה-Client ID הציבורי שנועד לרוץ בדפדפן)
 2. **Settings → Pages** → תחת Build and deployment → Source, בחרו
    **GitHub Actions**.
 3. מזגו את הענף הזה ל-`main` (או פשוט דחפו אליו) — ה-workflow
@@ -63,21 +108,35 @@ Storage דורש שדרוג לתוכנית בתשלום (Blaze) גם לשימו�
    Pages שלכם, האתר של הריפו הזה יופיע אוטומטית תחת `r.is-cool.dev/zikaron`
    (בלי צורך בהגדרת CNAME נוסף בריפו הזה).
 
-**זהו.** מעכשיו, כל `git push` ל-`main` מפרסם גרסה מעודכנת אוטומטית — אין
-צורך להריץ שום דבר בעצמכם, ואין עלות בשום שלב.
+**זהו.** מעכשיו, כל `git push` ל-`main` מפרסם גרסה מעודכנת אוטומטית של האתר
+ושל ה-Worker כאחד — אין צורך להריץ שום דבר בעצמכם.
+
+## מנהל (יצירת דפים ללא הגבלה וללא עלות)
+
+חשבון Google עם המייל `rb077858@gmail.com` מוגדר כמנהל: יכול ליצור דפי הנצחה
+ללא הגבלה בלי לצרוך קרדיטים בכלל. הבדיקה הזו קורית בתוך ה-Worker (לא רק
+בממשק) — כלומר אי אפשר לזייף אותה מהדפדפן. כדי לשנות את המייל המנהל, ערכו את
+`ADMIN_EMAIL` גם ב-`worker/wrangler.toml` וגם ב-`src/lib/credits.ts`.
 
 ## איך זה עובד מתחת למכסה
 
 - **Next.js** (App Router) בנוי במצב `output: "export"` — כלומר `next build`
   מפיק תיקיית `out/` עם קבצי HTML/CSS/JS סטטיים בלבד, בלי שרת Node.js בכלל.
-- **GitHub Actions** (`.github/workflows/deploy.yml`) מריץ `npm run build`
-  עם משתני הסביבה הציבוריים (config של Firebase/Cloudinary) מוזרקים
-  מה-Secrets, ומעלה את `out/` ל-GitHub Pages דרך `actions/deploy-pages`.
 - **Firebase Authentication + Firestore** — התחברות עם Google ומסד הנתונים,
-  שניהם חינמיים במלואם בתוכנית Spark. האבטחה נאכפת ע"י חוקי Firestore Rules
-  (בריפו: `firestore.rules`) — לא ע"י שרת.
+  שניהם חינמיים במלואם בתוכנית Spark.
 - **Cloudinary** — אחסון קבצים (תמונות, הקלטת סיפור חיים) דרך unsigned upload
   preset, ישירות מהדפדפן. חינמי, בלי כרטיס אשראי, בניגוד ל-Firebase Storage.
+- **Cloudflare Worker** (`worker/`) — הגורם המהימן היחיד שמותר לו ליצור דף
+  הנצחה או לשנות יתרת קרדיטים (`firestore.rules` חוסם את שני אלה ישירות
+  מהדפדפן). לפני יצירת דף: בודק את זהות המשתמש (אימות טוקן Firebase), בודק
+  יתרת קרדיטים (או שהמשתמש הוא המנהל), ורק אז יוצר את הדף ומחסיר קרדיטים —
+  הכל בפעולה אטומית אחת. לפני זקיפת קרדיטים: **תופס (capture) את תשלום
+  PayPal בעצמו בצד שרת** (לא בדפדפן) באמצעות ה-Client Secret הסודי, ומוודא
+  שהסכום שבאמת שולם תואם למספר הקרדיטים המבוקש — ורק אז זוקף אותם. גישתו
+  ל-Firestore היא כשל Service Account (כמו Admin SDK), ולכן אינה כפופה
+  לחוקי האבטחה של הדפדפן.
+- **GitHub Actions** — שני workflows: אחד בונה ומפרסם את האתר ל-GitHub Pages,
+  ואחד מפרסם את ה-Worker ל-Cloudflare, שניהם בכל דחיפה ל-`main`.
 
 ### הערה טכנית: כתובות הדפים
 
@@ -92,21 +151,30 @@ Storage דורש שדרוג לתוכנית בתשלום (Blaze) גם לשימו�
 
 - `src/lib/firebase.ts` — אתחול Firebase client SDK (Auth + Firestore).
 - `src/lib/cloudinary.ts` — העלאת קבצים (unsigned upload) ל-Cloudinary.
+- `src/lib/credits.ts` — קריאת/מעקב יתרת קרדיטים, וקריאה ל-Worker ליצירת דף
+  ולרכישת קרדיטים.
 - `src/lib/use-auth.ts` — hook להתחברות/התנתקות עם Google.
-- `src/lib/memorials.ts` — כל פעולות ה-CRUD מול Firestore + Cloudinary
-  (יצירה, עריכה, מחיקה, העלאת תמונות/הקלטה, קיר נרות).
+- `src/lib/memorials.ts` — פעולות ה-CRUD מול Firestore + Cloudinary (עריכה,
+  מחיקה, העלאת תמונות/הקלטה, קיר נרות — הכל חוץ מיצירה, שעוברת דרך ה-Worker).
 - `src/lib/hebrew-date.ts` — המרת תאריכים לועזי/עברי וחישוב יום השנה הבא
   (יארצייט) באמצעות [`@hebcal/core`](https://github.com/hebcal/hebcal-es6).
 - `src/components/memorial/` — כל הרכיבים של דף ההנצחה הציבורי (נר, תעודת
   זהות, סיפור חיים, מדיה, תהילים, יום השנה, מצבה, שיתוף, ברקוד).
 - `src/app/` — הדפים: `/` (נחיתה), `/dashboard` (הדפים שלי), `/create`
-  (יצירת דף), `/memorial` (דף הנצחה ציבורי, `?slug=`), `/memorial/edit`.
+  (יצירת דף), `/credits` (רכישת קרדיטים), `/memorial` (דף הנצחה ציבורי,
+  `?slug=`), `/memorial/edit`.
 - `firestore.rules`, `firestore.indexes.json` — חוקי אבטחה ואינדקסים ל-Firestore.
-- `.github/workflows/deploy.yml` — בנייה ופרסום אוטומטיים ל-GitHub Pages.
+- `worker/` — ה-Cloudflare Worker (ראו `worker/README.md`).
+- `.github/workflows/deploy.yml` — בנייה ופרסום האתר ל-GitHub Pages.
+- `.github/workflows/deploy-worker.yml` — פרסום ה-Worker ל-Cloudflare.
 
 ## תכונות עיקריות
 
-- התחברות עם Google, ולכל משתמש דף "הדפים שלי" עם כל דפי ההנצחה שיצר.
+- התחברות עם Google, ולכל משתמש דף "הדפים שלי" עם כל דפי ההנצחה שיצר, ויתרת
+  קרדיטים גלויה בכל עמוד.
+- יצירת דף עולה 5 קרדיטים (קרדיט = 1 ₪), נרכשים דרך PayPal בעמוד `/credits`;
+  עריכת דף קיים תמיד חינמית; מחיקת דף אינה מזכה בקרדיטים בחזרה (מוצג באזהרה
+  ברורה לפני אישור מחיקה).
 - טופס יצירה/עריכה מלא: שם, הורים, בן/בת זוג, ילדים, עיסוק, תאריכים, מקום
   קבורה, סיפור חיים (+ הקלטת קול אופציונלית), קישור לסרטון, תמונה ראשית,
   גלריית תמונות, תמונת מצבה וקישור ניווט אליה.
@@ -124,7 +192,7 @@ Storage דורש שדרוג לתוכנית בתשלום (Blaze) גם לשימו�
 
 ```bash
 cp .env.example .env
-# ערכו את .env והדביקו את פרטי ה-Firebase/Cloudinary config (או הפעילו אמולטורים, ראו למטה)
+# ערכו את .env והדביקו את פרטי ה-config (או הפעילו אמולטורים, ראו למטה)
 npm install
 npm run dev
 ```
@@ -141,6 +209,8 @@ firebase emulators:start --only auth,firestore
 
 ואז ב-`.env` הגדירו `NEXT_PUBLIC_USE_FIREBASE_EMULATORS="true"` (יש לבנות
 מחדש לאחר שינוי משתני `NEXT_PUBLIC_*`, כיוון שהם מוטמעים ב-build).
+
+להרצת ה-Worker מקומית: ראו [`worker/README.md`](./worker/README.md).
 
 כדי לבדוק את קובצי הפלט הסטטיים בדיוק כמו שהם ייראו ב-GitHub Pages (במקום
 `next dev`): `npm run build && npm run preview`.

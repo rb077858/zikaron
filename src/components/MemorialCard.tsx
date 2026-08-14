@@ -93,7 +93,7 @@ export function MemorialCard({
               disabled={busy}
               className="rounded-full border border-red-500/50 px-3 py-1.5 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-60"
             >
-              {busy ? "מוחק..." : "אישור מחיקה"}
+              {busy ? "מוחק..." : "כן, מחיקה סופית"}
             </button>
           ) : (
             <button
@@ -104,6 +104,12 @@ export function MemorialCard({
             </button>
           )}
         </div>
+
+        {confirming && (
+          <p className="mt-3 text-xs leading-5 text-red-400">
+            ⚠ שימו לב: הקרדיטים ששולמו על יצירת הדף הזה <b>לא יוחזרו</b> לאחר מחיקה.
+          </p>
+        )}
       </div>
     </div>
   );

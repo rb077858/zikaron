@@ -1,0 +1,13 @@
+name = "zikaron-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Non-secret configuration. Secrets (PayPal client secret, Google service
+# account key, etc.) are set separately — see the README — never put them
+# here, since this file is committed to the repo.
+[vars]
+FIREBASE_PROJECT_ID = "your-firebase-project-id"
+PAYPAL_CLIENT_ID = "your-paypal-live-client-id"
+PAYPAL_API_BASE = "https://api-m.paypal.com"
+ADMIN_EMAIL = "rb077858@gmail.com"
+ALLOWED_ORIGIN = "https://r.is-cool.dev"

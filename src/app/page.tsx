@@ -32,8 +32,9 @@ const FEATURES = [
 
 const STEPS = [
   { n: "1", t: "מתחברים עם חשבון Google" },
-  { n: "2", t: "ממלאים את פרטי היקיר/ה ומעלים תמונות" },
-  { n: "3", t: "מקבלים קישור וברקוד להדפסה על המצבה" },
+  { n: "2", t: "רוכשים קרדיטים (5 קרדיטים = דף אחד)" },
+  { n: "3", t: "ממלאים את פרטי היקיר/ה ומעלים תמונות" },
+  { n: "4", t: "מקבלים קישור וברקוד להדפסה על המצבה" },
 ];
 
 export default function Home() {
@@ -97,7 +98,7 @@ export default function Home() {
                 </button>
               )}
               <span className="text-sm text-muted">
-                ללא עלות · ללא צורך בכרטיס אשראי
+                ההתחברות חינמית · יצירת דף עולה 5 קרדיטים (5 ₪)
               </span>
             </div>
           </div>
@@ -124,7 +125,7 @@ export default function Home() {
         {/* How it works */}
         <section className="mx-auto max-w-3xl px-5 py-16 text-center">
           <h2 className="mb-10 text-2xl font-bold text-gold-soft">איך זה עובד</h2>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
               <div key={s.n} className="flex flex-col items-center gap-3">
                 <div className="flex size-11 items-center justify-center rounded-full border border-gold text-lg font-bold text-gold">

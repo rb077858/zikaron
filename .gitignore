@@ -34,6 +34,11 @@ yarn-error.log*
 .env*
 !.env.example
 
+# worker (Cloudflare Worker in worker/)
+worker/node_modules
+worker/.dev.vars
+worker/.wrangler
+
 # vercel
 .vercel
 
