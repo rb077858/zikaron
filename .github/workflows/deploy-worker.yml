@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: worker/package-lock.json
 
@@ -37,6 +37,11 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
+          # Without this, the action ignores the Wrangler already installed
+          # via `npm ci` (per worker/package.json) and tries to install its
+          # own old default instead, which conflicts with the newer
+          # @cloudflare/workers-types this project uses.
+          wranglerVersion: "4.123.0"
           secrets: |
             PAYPAL_CLIENT_SECRET
             GOOGLE_SERVICE_ACCOUNT_EMAIL
