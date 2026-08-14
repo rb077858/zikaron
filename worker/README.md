@@ -16,9 +16,9 @@ Firestore cannot enforce on its own:
   PayPal client credentials, never sent to the browser) and only credits the
   account after confirming the real, captured amount.
 
-Everything else in the app (editing, deleting, lighting a candle, uploading
-photos) stays a direct, free client→Firestore/Cloudinary operation — this
-Worker is deliberately narrow in scope.
+Everything else in the app (editing, deleting, uploading photos) stays a
+direct, free client→Firestore/Cloudinary operation — this Worker is
+deliberately narrow in scope.
 
 See the main [README](../README.md) for the full one-time setup walkthrough
 (PayPal Live REST app, Firebase service account, Cloudflare secrets, GitHub

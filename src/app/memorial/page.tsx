@@ -7,15 +7,11 @@ import { useCurrentUser } from "@/lib/use-auth";
 import {
   subscribeToMemorial,
   subscribeToPhotos,
-  subscribeToCandles,
   type Memorial,
   type Photo,
-  type Candle,
 } from "@/lib/memorials";
 import { HeroHeader } from "@/components/memorial/HeroHeader";
 import { PublicNav } from "@/components/memorial/PublicNav";
-import { CandleSection } from "@/components/memorial/CandleSection";
-import { CandleWall } from "@/components/memorial/CandleWall";
 import { IdCardSection } from "@/components/memorial/IdCardSection";
 import { LifeStorySection } from "@/components/memorial/LifeStorySection";
 import { TehilimSection } from "@/components/memorial/TehilimSection";
@@ -31,7 +27,6 @@ function MemorialPageInner() {
   const { user } = useCurrentUser();
   const [memorial, setMemorial] = useState<Memorial | null | undefined>(undefined);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [candles, setCandles] = useState<Candle[]>([]);
 
   useEffect(() => {
     if (!slug) return;
@@ -42,12 +37,6 @@ function MemorialPageInner() {
   useEffect(() => {
     if (!slug) return;
     const unsub = subscribeToPhotos(slug, setPhotos);
-    return () => unsub();
-  }, [slug]);
-
-  useEffect(() => {
-    if (!slug) return;
-    const unsub = subscribeToCandles(slug, setCandles);
     return () => unsub();
   }, [slug]);
 
@@ -86,7 +75,6 @@ function MemorialPageInner() {
         <MediaSection memorial={memorial} photos={photos} />
         <YahrzeitSection memorial={memorial} />
         <GraveSection memorial={memorial} />
-        <CandleSection memorial={memorial} fullName={fullName} candlesCount={candles.length} />
         <ShareRow slug={slug} fullName={fullName} />
 
         {isOwner && (
@@ -113,8 +101,6 @@ function MemorialPageInner() {
           </Link>
         </p>
       </footer>
-
-      <CandleWall candles={candles} fullName={fullName} />
     </div>
   );
 }

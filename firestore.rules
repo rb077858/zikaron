@@ -45,21 +45,6 @@ service cloud.firestore {
 
         allow delete: if isOwner(resource.data);
       }
-
-      match /candles/{candleId} {
-        allow read: if resource.data.published == true || isOwner(resource.data);
-
-        // Anyone (including guests) may light a virtual candle and sign the
-        // tribute wall — the memorial's own ownerId/published are copied in
-        // by the app when it already has the memorial loaded.
-        allow create: if request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 80
-          && (request.resource.data.message == null || request.resource.data.message.size() <= 500)
-          && request.resource.data.ownerId is string;
-
-        allow delete: if isOwner(resource.data);
-      }
     }
 
     // Credit balances. Only ever written by the trusted Cloudflare Worker
