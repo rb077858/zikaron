@@ -55,6 +55,14 @@ export type FirestoreWrite = {
   updatePath: string;
   fields: Record<string, FSValue>;
   precondition?: { exists: boolean } | { updateTime: string };
+  /**
+   * Firestore's `update` write REPLACES THE WHOLE DOCUMENT with just
+   * `fields` unless an update mask is given — fine for a brand-new doc
+   * (nothing else exists yet to lose), but silently destructive for a
+   * partial update of an existing multi-field doc. Pass the field paths
+   * being touched here whenever `fields` isn't the complete document.
+   */
+  updateMask?: string[];
 };
 
 export class FirestoreClient {
@@ -96,6 +104,7 @@ export class FirestoreClient {
     const body = {
       writes: writes.map((w) => ({
         update: { name: this.docName(w.updatePath), fields: w.fields },
+        updateMask: w.updateMask ? { fieldPaths: w.updateMask } : undefined,
         currentDocument: w.precondition,
       })),
     };

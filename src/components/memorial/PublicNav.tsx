@@ -4,24 +4,31 @@ import { useEffect, useState } from "react";
 
 type NavItem = { href: string; icon: string; label: string };
 
-// Order mirrors the section order on the page.
+// Order mirrors the section order on the page. Sharing a memory is a
+// closing, participatory action rather than the entry point, so it sits
+// last — not first, where a first-time visitor would otherwise be asked to
+// act before they've even seen who the page is for.
 const BASE_ITEMS: NavItem[] = [
   { href: "#top", icon: "⌂", label: "ראשי" },
   { href: "#whoami", icon: "🪪", label: "מי אני?" },
   { href: "#tehilim", icon: "📖", label: "תהילים" },
   { href: "#media", icon: "🖼️", label: "מדיה" },
+  { href: "#memories", icon: "💭", label: "שיתוף זיכרון" },
 ];
 
 export function PublicNav({
   hasTehilim,
   hasMedia,
+  hasMemoryWall,
 }: {
   hasTehilim: boolean;
   hasMedia: boolean;
+  hasMemoryWall: boolean;
 }) {
   const items = BASE_ITEMS.filter((item) => {
     if (item.href === "#tehilim") return hasTehilim;
     if (item.href === "#media") return hasMedia;
+    if (item.href === "#memories") return hasMemoryWall;
     return true;
   });
   const key = items.map((i) => i.href).join(",");

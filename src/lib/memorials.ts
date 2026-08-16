@@ -39,6 +39,7 @@ export type Memorial = {
   graveImageUrl?: string | null;
   graveMapUrl?: string | null;
   tehilimChapter?: number | null;
+  memoryWallEnabled?: boolean;
   published: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -49,6 +50,14 @@ export type Photo = {
   url: string;
   caption?: string | null;
   order: number;
+};
+
+export type Memory = {
+  id: string;
+  name: string;
+  text?: string | null;
+  photoUrls: string[];
+  createdAt?: Timestamp;
 };
 
 /**
@@ -113,8 +122,12 @@ export async function deleteMemorial(slug: string): Promise<void> {
   const photosSnap = await getDocs(
     query(collection(db, "memorials", slug, "photos"), where("published", "==", true))
   );
+  const memoriesSnap = await getDocs(
+    query(collection(db, "memorials", slug, "memories"), where("published", "==", true))
+  );
   const batch = writeBatch(db);
   photosSnap.forEach((d) => batch.delete(d.ref));
+  memoriesSnap.forEach((d) => batch.delete(d.ref));
   batch.delete(doc(db, "memorials", slug));
   await batch.commit();
 }
@@ -154,6 +167,20 @@ export function subscribeToPhotos(
   });
 }
 
+export function subscribeToMemories(
+  slug: string,
+  cb: (memories: Memory[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, "memorials", slug, "memories"),
+    where("published", "==", true),
+    orderBy("createdAt", "desc")
+  );
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Memory, "id">) })));
+  });
+}
+
 export async function getUserMemorials(ownerId: string): Promise<Memorial[]> {
   const q = query(
     collection(db, "memorials"),
@@ -166,6 +193,10 @@ export async function getUserMemorials(ownerId: string): Promise<Memorial[]> {
 
 export async function deletePhoto(slug: string, photoId: string): Promise<void> {
   await deleteDoc(doc(db, "memorials", slug, "photos", photoId));
+}
+
+export async function deleteMemory(slug: string, memoryId: string): Promise<void> {
+  await deleteDoc(doc(db, "memorials", slug, "memories", memoryId));
 }
 
 async function uploadFile(slug: string, folder: string, file: File): Promise<string> {
@@ -205,4 +236,28 @@ export async function addGalleryPhotos(
       createdAt: serverTimestamp(),
     });
   }
+}
+
+const MAX_MEMORY_PHOTOS = 4;
+
+export async function addMemory(
+  slug: string,
+  name: string,
+  text: string | undefined,
+  photoFiles: File[],
+  ownership: Ownership
+): Promise<void> {
+  const photoUrls: string[] = [];
+  for (const file of photoFiles.slice(0, MAX_MEMORY_PHOTOS)) {
+    photoUrls.push(await uploadFile(slug, "memories", file));
+  }
+  await addDoc(collection(db, "memorials", slug, "memories"), {
+    name: name.trim().slice(0, 80),
+    text: text?.trim() ? text.trim().slice(0, 1000) : null,
+    photoUrls,
+    ownerId: ownership.ownerId,
+    published: ownership.published,
+    memoryWallEnabled: true,
+    createdAt: serverTimestamp(),
+  });
 }
