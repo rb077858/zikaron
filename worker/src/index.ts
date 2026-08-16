@@ -16,6 +16,7 @@ import { capturePayPalOrder } from "./paypal";
 import { slugify } from "./slug";
 
 const CREDITS_PER_MEMORIAL = 5;
+const MEMORY_WALL_COST = 2;
 const MAX_ATTEMPTS = 3;
 
 function corsHeaders(env: Env): Record<string, string> {
@@ -148,6 +149,7 @@ async function handleCreateMemorial(request: Request, env: Env): Promise<Respons
             graveImageUrl: fsNull(),
             graveMapUrl: optString(body.graveMapUrl),
             tehilimChapter: optChapter(body.tehilimChapter),
+            memoryWallEnabled: fsBool(false),
             published: fsBool(true),
             createdAt: fsTimestamp(new Date()),
             updatedAt: fsTimestamp(new Date()),
@@ -178,6 +180,92 @@ async function handleCreateMemorial(request: Request, env: Env): Promise<Respons
   }
 
   return json(env, { error: "CREATE_FAILED_RETRY_EXCEEDED" }, 500);
+}
+
+/**
+ * Enables the "share a memory" feature on one page — a paid, per-page
+ * add-on (unlike memorial creation, this is opt-in after the page already
+ * exists, so it's a separate charge). `memoryWallEnabled` is intentionally
+ * NOT settable via the client's normal memorial `update` — firestore.rules
+ * pins it immutable for owner writes — so this Worker path (bypassing the
+ * rules via the service account, same as create-memorial) is the only way
+ * it can ever flip to true.
+ */
+async function handleEnableMemoryWall(request: Request, env: Env): Promise<Response> {
+  const token = getBearerToken(request);
+  if (!token) return json(env, { error: "UNAUTHENTICATED" }, 401);
+
+  let user;
+  try {
+    user = await verifyFirebaseIdToken(token, env.FIREBASE_PROJECT_ID);
+  } catch {
+    return json(env, { error: "INVALID_TOKEN" }, 401);
+  }
+
+  const body = (await request.json().catch(() => null)) as { slug?: string } | null;
+  const slug = body?.slug;
+  if (!slug || typeof slug !== "string") {
+    return json(env, { error: "INVALID_INPUT" }, 400);
+  }
+
+  const isAdmin = user.email === env.ADMIN_EMAIL;
+  const db = await getFirestoreClient(env);
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const memorialDoc = await db.get(`memorials/${slug}`);
+    if (!memorialDoc.exists) return json(env, { error: "MEMORIAL_NOT_FOUND" }, 404);
+    if (memorialDoc.fields.ownerId !== user.uid) {
+      return json(env, { error: "FORBIDDEN" }, 403);
+    }
+    if (memorialDoc.fields.memoryWallEnabled === true) {
+      return json(env, { alreadyEnabled: true });
+    }
+
+    let currentCredits = 0;
+    let creditsUpdateTime: string | undefined;
+    if (!isAdmin) {
+      const userDoc = await db.get(`users/${user.uid}`);
+      if (userDoc.exists) {
+        currentCredits = Number(userDoc.fields.credits ?? 0);
+        creditsUpdateTime = userDoc.updateTime;
+      }
+      if (currentCredits < MEMORY_WALL_COST) {
+        return json(env, { error: "INSUFFICIENT_CREDITS", credits: currentCredits }, 402);
+      }
+    }
+
+    try {
+      const writes: FirestoreWrite[] = [
+        {
+          updatePath: `memorials/${slug}`,
+          fields: { memoryWallEnabled: fsBool(true) },
+          updateMask: ["memoryWallEnabled"],
+          precondition: { updateTime: memorialDoc.updateTime },
+        },
+      ];
+
+      if (!isAdmin) {
+        writes.push({
+          updatePath: `users/${user.uid}`,
+          fields: { credits: fsInt(currentCredits - MEMORY_WALL_COST) },
+          precondition: creditsUpdateTime
+            ? ({ updateTime: creditsUpdateTime } as const)
+            : ({ exists: false } as const),
+        });
+      }
+
+      await db.commit(writes);
+      return json(env, { success: true });
+    } catch (err) {
+      if (isFailedPrecondition(err) && attempt < MAX_ATTEMPTS - 1) {
+        continue; // someone else touched credits or the memorial doc — retry fresh
+      }
+      console.error(err);
+      return json(env, { error: "ENABLE_FAILED" }, 500);
+    }
+  }
+
+  return json(env, { error: "ENABLE_FAILED_RETRY_EXCEEDED" }, 500);
 }
 
 async function handlePurchaseCredits(request: Request, env: Env): Promise<Response> {
@@ -277,6 +365,9 @@ export default {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/api/create-memorial") {
       return handleCreateMemorial(request, env);
+    }
+    if (request.method === "POST" && url.pathname === "/api/enable-memory-wall") {
+      return handleEnableMemoryWall(request, env);
     }
     if (request.method === "POST" && url.pathname === "/api/purchase-credits") {
       return handlePurchaseCredits(request, env);

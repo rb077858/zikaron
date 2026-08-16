@@ -28,8 +28,14 @@ service cloud.firestore {
 
       // Editing and deleting stay free, direct, owner-only operations —
       // no money involved, so no need to route them through the Worker.
+      // memoryWallEnabled is the one exception: enabling it costs credits,
+      // so it must stay pinned to its current value here — only the Worker
+      // (via its service account, which bypasses these rules) can flip it,
+      // the same way memorial creation itself is Worker-only.
       allow update: if isOwner(resource.data)
-        && request.resource.data.ownerId == resource.data.ownerId;
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.get('memoryWallEnabled', false)
+          == resource.data.get('memoryWallEnabled', false);
 
       allow delete: if isOwner(resource.data);
 
@@ -42,6 +48,28 @@ service cloud.firestore {
 
         allow create: if isOwner(request.resource.data)
           && request.resource.data.url is string;
+
+        allow delete: if isOwner(resource.data);
+      }
+
+      // "Share a memory" — a paid, opt-in add-on (see memoryWallEnabled
+      // above). Anyone (including guests) may post a memory once it's
+      // enabled; the page owner can remove any entry. Same denormalization
+      // approach as `photos`: the doc copies ownerId/published/
+      // memoryWallEnabled from the memorial at write time, since rules
+      // can't get() a parent doc whose ID contains Hebrew characters.
+      match /memories/{memoryId} {
+        allow read: if resource.data.published == true || isOwner(resource.data);
+
+        allow create: if request.resource.data.memoryWallEnabled == true
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && (request.resource.data.text == null
+            || (request.resource.data.text is string && request.resource.data.text.size() <= 1000))
+          && request.resource.data.photoUrls is list
+          && request.resource.data.photoUrls.size() <= 4
+          && request.resource.data.ownerId is string;
 
         allow delete: if isOwner(resource.data);
       }

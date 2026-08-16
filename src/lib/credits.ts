@@ -9,6 +9,7 @@ import type { MemorialFormInput } from "@/lib/memorials";
 export const ADMIN_EMAIL = "rb077858@gmail.com";
 
 export const CREDITS_PER_MEMORIAL = 5;
+export const MEMORY_WALL_COST = 2;
 
 const WORKER_URL = (process.env.NEXT_PUBLIC_WORKER_URL || "").replace(/\/$/, "");
 
@@ -83,6 +84,18 @@ export async function createMemorialViaWorker(
 ): Promise<string> {
   const data = await workerFetch("/api/create-memorial", idToken, fields);
   return (data as { slug: string }).slug;
+}
+
+/**
+ * Enables "share a memory" on an existing page — a separate, per-page
+ * charge (see MEMORY_WALL_COST) distinct from the memorial-creation cost.
+ * Same trust model as createMemorialViaWorker: memoryWallEnabled can only
+ * ever be flipped by the Worker (firestore.rules pins it immutable for
+ * direct client updates), so there's no way to get this for free by
+ * calling Firestore directly.
+ */
+export async function enableMemoryWallViaWorker(idToken: string, slug: string): Promise<void> {
+  await workerFetch("/api/enable-memory-wall", idToken, { slug });
 }
 
 export async function purchaseCreditsViaWorker(

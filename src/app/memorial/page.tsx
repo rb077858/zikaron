@@ -7,8 +7,10 @@ import { useCurrentUser } from "@/lib/use-auth";
 import {
   subscribeToMemorial,
   subscribeToPhotos,
+  subscribeToMemories,
   type Memorial,
   type Photo,
+  type Memory,
 } from "@/lib/memorials";
 import { HeroHeader } from "@/components/memorial/HeroHeader";
 import { PublicNav } from "@/components/memorial/PublicNav";
@@ -18,6 +20,8 @@ import { TehilimSection } from "@/components/memorial/TehilimSection";
 import { MediaSection } from "@/components/memorial/MediaSection";
 import { YahrzeitSection } from "@/components/memorial/YahrzeitSection";
 import { GraveSection } from "@/components/memorial/GraveSection";
+import { MemoryWallSection } from "@/components/memorial/MemoryWallSection";
+import { EnableMemoryWallCard } from "@/components/memorial/EnableMemoryWallCard";
 import { ShareRow } from "@/components/memorial/ShareRow";
 import { QrCodeCard } from "@/components/memorial/QrCodeCard";
 import { youtubeEmbedUrl } from "@/lib/youtube";
@@ -27,6 +31,7 @@ function MemorialPageInner() {
   const { user } = useCurrentUser();
   const [memorial, setMemorial] = useState<Memorial | null | undefined>(undefined);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
 
   useEffect(() => {
     if (!slug) return;
@@ -37,6 +42,12 @@ function MemorialPageInner() {
   useEffect(() => {
     if (!slug) return;
     const unsub = subscribeToPhotos(slug, setPhotos);
+    return () => unsub();
+  }, [slug]);
+
+  useEffect(() => {
+    if (!slug) return;
+    const unsub = subscribeToMemories(slug, setMemories);
     return () => unsub();
   }, [slug]);
 
@@ -62,11 +73,12 @@ function MemorialPageInner() {
   const isOwner = user?.uid === memorial.ownerId;
   const hasTehilim = !!memorial.tehilimChapter;
   const hasMedia = photos.length > 0 || !!(memorial.videoUrl && youtubeEmbedUrl(memorial.videoUrl));
+  const hasMemoryWall = !!memorial.memoryWallEnabled;
 
   return (
     <div className="flex min-h-screen flex-col">
       <HeroHeader memorial={memorial} />
-      <PublicNav hasTehilim={hasTehilim} hasMedia={hasMedia} />
+      <PublicNav hasTehilim={hasTehilim} hasMedia={hasMedia} hasMemoryWall={hasMemoryWall} />
 
       <main className="flex-1">
         <IdCardSection memorial={memorial} />
@@ -75,13 +87,17 @@ function MemorialPageInner() {
         <MediaSection memorial={memorial} photos={photos} />
         <YahrzeitSection memorial={memorial} />
         <GraveSection memorial={memorial} />
+        {hasMemoryWall && (
+          <MemoryWallSection memorial={memorial} fullName={fullName} memories={memories} />
+        )}
         <ShareRow slug={slug} fullName={fullName} />
 
         {isOwner && (
           <section className="border-t border-border px-5 py-14">
             <div className="mx-auto flex max-w-lg flex-col items-center gap-6 text-center">
               <p className="text-sm text-muted">כלים לבעל/ת הדף</p>
-              <QrCodeCard slug={slug} fullName={fullName} />
+              <QrCodeCard slug={slug} fullName={fullName} coverPhotoUrl={memorial.coverPhotoUrl} />
+              {!hasMemoryWall && <EnableMemoryWallCard slug={slug} />}
               <Link
                 href={`/memorial/edit?slug=${encodeURIComponent(slug)}`}
                 className="rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:border-gold hover:text-gold-soft transition-colors"
