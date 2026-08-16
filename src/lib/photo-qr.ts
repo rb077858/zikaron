@@ -101,22 +101,6 @@ function isAlignmentPattern(row: number, col: number, centers: Array<[number, nu
   return false;
 }
 
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const m = hex.replace("#", "");
-  return [parseInt(m.slice(0, 2), 16), parseInt(m.slice(2, 4), 16), parseInt(m.slice(4, 6), 16)];
-}
-
-function mix(a: [number, number, number], b: [number, number, number], t: number): string {
-  const r = Math.round(a[0] + (b[0] - a[0]) * t);
-  const g = Math.round(a[1] + (b[1] - a[1]) * t);
-  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
-  return `rgb(${r}, ${g}, ${bl})`;
-}
-
 function drawImageCover(
   ctx: CanvasRenderingContext2D,
   img: CanvasImageSource,
@@ -146,6 +130,10 @@ export type PhotoQrOptions = {
   quietZoneModules?: number;
   darkColor?: string;
   lightColor?: string;
+  /** Diameter of each data-module dot, as a fraction of the cell. */
+  dotScale?: number;
+  /** Opacity of the semi-transparent wash drawn over the photo before the dots. */
+  washOpacity?: number;
 };
 
 const DEFAULTS: Required<PhotoQrOptions> = {
@@ -153,20 +141,23 @@ const DEFAULTS: Required<PhotoQrOptions> = {
   quietZoneModules: 4,
   darkColor: "#241a10",
   lightColor: "#fdf8ee",
+  dotScale: 0.72,
+  washOpacity: 0.4,
 };
 
 /**
  * Renders `data` as a QR code whose data-carrying modules are built from the
- * given photo itself, not a small logo dropped on top: dark modules become
- * large circles tinted with that cell's own sampled photo color (biased
- * heavily toward black so luminance stays low enough to always read as
- * "dark" no matter how bright the underlying photo is there); light modules
- * mostly let the raw photo show through untouched, only gaining a small
- * corrective light-tinted dot where the photo itself is too dark to read as
- * "light". High error correction (H, 30%) gives the decoder enough
- * redundancy to tolerate this everywhere outside the finder patterns,
- * timing pattern, and alignment patterns — the structural modules a
- * scanner needs untouched to lock onto the grid in the first place.
+ * given photo itself, not a small logo dropped on top. The photo fills the
+ * whole grid with a soft translucent wash over it, and every data module
+ * gets a plain, consistently-sized dot (black for dark modules, near-white
+ * for light ones) — a decoder only needs the *center* of a module to read
+ * correctly, so a dot well short of the full cell still decodes reliably
+ * while leaving a visible ring of the washed photo around it, which is what
+ * actually reads as "the photo" at a glance. Finder patterns, the timing
+ * pattern, and alignment patterns are the exception: kept crisp and
+ * untouched, since a scanner needs those intact to lock onto the grid
+ * before it can read anything else. High error correction (H, 30%) gives
+ * the decoder margin for everything else.
  */
 export function renderPhotoQr(
   canvas: HTMLCanvasElement,
@@ -187,15 +178,22 @@ export function renderPhotoQr(
   const size = inner + quiet * 2;
   canvas.width = size;
   canvas.height = size;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-
-  const darkRgb = hexToRgb(opts.darkColor);
-  const lightRgb = hexToRgb(opts.lightColor);
+  const ctx = canvas.getContext("2d")!;
   const alignCenters = alignmentCenters(n);
 
   ctx.fillStyle = opts.lightColor;
   ctx.fillRect(0, 0, size, size);
   drawImageCover(ctx, image, imageWidth, imageHeight, quiet, quiet, inner);
+
+  // Soft wash over the photo so it reads as one cohesive backdrop rather
+  // than fighting the dots for attention — also a plain fixed color, so it
+  // never itself risks looking like a stray dark/light module.
+  ctx.fillStyle = opts.lightColor;
+  ctx.globalAlpha = opts.washOpacity;
+  ctx.fillRect(quiet, quiet, inner, inner);
+  ctx.globalAlpha = 1;
+
+  const dotRadius = (opts.cellPx * opts.dotScale) / 2;
 
   for (let row = 0; row < n; row++) {
     for (let col = 0; col < n; col++) {
@@ -213,36 +211,8 @@ export function renderPhotoQr(
         continue;
       }
 
-      const { data: px } = ctx.getImageData(x, y, opts.cellPx, opts.cellPx);
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      const count = px.length / 4;
-      for (let i = 0; i < px.length; i += 4) {
-        r += px[i];
-        g += px[i + 1];
-        b += px[i + 2];
-      }
-      r /= count;
-      g /= count;
-      b /= count;
-      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-      if (dark) {
-        // Nearly fills the cell regardless of the photo, so it always reads
-        // as dark; only the last ~15% of size responds to local brightness.
-        const frac = clamp(0.82 + Math.max(0, 170 - lum) / 170 * 0.16, 0.82, 0.98);
-        ctx.fillStyle = mix([r, g, b], darkRgb, 0.8);
-        fillCircle(ctx, x + opts.cellPx / 2, y + opts.cellPx / 2, (opts.cellPx * frac) / 2);
-      } else if (lum < 150) {
-        // The photo is too dark here to safely read as a light module —
-        // brighten just this cell, tinted, rather than leaving it raw.
-        const frac = clamp(((150 - lum) / 150) * 0.85, 0, 0.85);
-        ctx.fillStyle = mix([r, g, b], lightRgb, 0.8);
-        fillCircle(ctx, x + opts.cellPx / 2, y + opts.cellPx / 2, (opts.cellPx * frac) / 2);
-      }
-      // else: light module over an already-light photo area — leave the
-      // raw photo showing through untouched.
+      ctx.fillStyle = dark ? opts.darkColor : opts.lightColor;
+      fillCircle(ctx, x + opts.cellPx / 2, y + opts.cellPx / 2, dotRadius);
     }
   }
 
