@@ -7,7 +7,7 @@ PayPal; עריכת דף קיים תמיד חינמית.
 
 **אין כאן שרת להריץ בעצמכם, ותפעול האתר (לא כולל התשלומים ללקוחות) חינמי
 לגמרי.** האתר עצמו הוא קובצי HTML/JS סטטיים, שמתארחים ב-GitHub Pages תחת
-`r.is-cool.dev/zikaron` (חינם). ההתחברות ומסד הנתונים רצים ישירות מהדפדפן מול
+`zikaron.r.is-cool.dev` (חינם). ההתחברות ומסד הנתונים רצים ישירות מהדפדפן מול
 **Firebase Authentication + Firestore** (חינמיים לגמרי בתוכנית ה-Spark, בלי
 כרטיס אשראי). קבצים (תמונות, הקלטות) מועלים ל-**Cloudinary** במקום
 ל-Firebase Storage (שדורש שדרוג בתשלום גם לשימוש זעיר). יצירת דף ורכישת
@@ -25,7 +25,7 @@ PayPal אכן התקבל לפני שנזקפים קרדיטים. אחרי ההג
 1. צרו פרויקט חדש ב-[Firebase Console](https://console.firebase.google.com).
    השאירו אותו בתוכנית **Spark** (החינמית) — אין צורך לשדרג ל-Blaze בכלל.
 2. **Authentication** → Sign-in method → הפעילו את ספק **Google**.
-   בטאב Settings → Authorized domains הוסיפו את `r.is-cool.dev`.
+   בטאב Settings → Authorized domains הוסיפו את `zikaron.r.is-cool.dev`.
 3. **Firestore Database** → Create database (Production mode).
 4. **Firestore → Rules**: העתיקו את התוכן של הקובץ [`firestore.rules`](./firestore.rules)
    מהריפו והדביקו שם, ואז Publish.
@@ -76,7 +76,9 @@ PayPal אכן התקבל לפני שנזקפים קרדיטים. אחרי ההג
    שלושה ערכים לא-סודיים:
    - `FIREBASE_PROJECT_ID` — ה-Project ID מ-Firebase
    - `PAYPAL_CLIENT_ID` — מ-PayPal (שלב 1 למעלה)
-   - `ALLOWED_ORIGIN` — נשאר `https://r.is-cool.dev` אם זה הדומיין שלכם
+   - `ALLOWED_ORIGIN` — הדומיין המדויק שהאתר מתארח בו, כולל תת-דומיין אם יש
+     (למשל `https://zikaron.r.is-cool.dev`) — חייב להתאים בדיוק לכתובת בשורת
+     הכתובת של הדפדפן, אחרת בקשות ה-API מהאתר ל-Worker ייחסמו (CORS)
 
    קומיטו ודחפו את השינוי (או ערכו ישירות בממשק העריכה של GitHub — זה טקסט
    רגיל, לא סוד).
@@ -104,9 +106,16 @@ PayPal אכן התקבל לפני שנזקפים קרדיטים. אחרי ההג
 3. מזגו את הענף הזה ל-`main` (או פשוט דחפו אליו) — ה-workflow
    [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) ירוץ
    אוטומטית, יבנה את האתר ויפרסם אותו.
-4. מכיוון ש-`r.is-cool.dev` כבר מוגדר כדומיין המותאם אישית של חשבון ה-GitHub
-   Pages שלכם, האתר של הריפו הזה יופיע אוטומטית תחת `r.is-cool.dev/zikaron`
-   (בלי צורך בהגדרת CNAME נוסף בריפו הזה).
+4. האתר מוגש מתת-הדומיין הייעודי שלו `zikaron.r.is-cool.dev` (לא תחת נתיב
+   כמו `r.is-cool.dev/zikaron`). כדי שזה יעבוד צריך:
+   - רשומת DNS מסוג `CNAME` אצל ספק הדומיין: `zikaron` → `<your-username>.github.io`.
+   - **Settings → Pages → Custom domain** בריפו **הזה** (לא בריפו של עמוד
+     המשתמש) — הזינו `zikaron.r.is-cool.dev` ואשרו.
+
+   כתובת `NEXT_PUBLIC_SITE_URL`/`NEXT_PUBLIC_BASE_PATH` למעלה כבר מוגדרות
+   לתת-דומיין הזה (בלי נתיב `/zikaron` בסוף) — אם תעברו לכתובת אחרת יש לעדכן
+   גם אותן וגם את `ALLOWED_ORIGIN` ב-`worker/wrangler.toml` (שלב 3.5) כך
+   שתמיד יתאימו בדיוק לכתובת שבשורת הדפדפן.
 
 **זהו.** מעכשיו, כל `git push` ל-`main` מפרסם גרסה מעודכנת אוטומטית של האתר
 ושל ה-Worker כאחד — אין צורך להריץ שום דבר בעצמכם.
