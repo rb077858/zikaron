@@ -105,7 +105,7 @@ export function MemoryWallSection({
             {memories.map((m, i) => (
               <div
                 key={m.id}
-                className="memory-card section-card overflow-hidden rounded-2xl transition-all hover:border-gold/50 hover:shadow-[0_0_24px_rgba(212,175,106,0.12)]"
+                className="memory-card section-card overflow-hidden rounded-2xl transition-all hover:border-gold/50 hover:shadow-[0_8px_24px_rgba(54,44,31,0.12)]"
                 style={{ animationDelay: `${Math.min(i, 10) * 70}ms` }}
               >
                 {m.photoUrls.length > 0 && (

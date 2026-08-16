@@ -21,7 +21,7 @@ import { MediaSection } from "@/components/memorial/MediaSection";
 import { YahrzeitSection } from "@/components/memorial/YahrzeitSection";
 import { GraveSection } from "@/components/memorial/GraveSection";
 import { MemoryWallSection } from "@/components/memorial/MemoryWallSection";
-import { EnableMemoryWallCard } from "@/components/memorial/EnableMemoryWallCard";
+import { MemoryWallToggleCard } from "@/components/memorial/MemoryWallToggleCard";
 import { ShareRow } from "@/components/memorial/ShareRow";
 import { QrCodeCard } from "@/components/memorial/QrCodeCard";
 import { youtubeEmbedUrl } from "@/lib/youtube";
@@ -97,7 +97,7 @@ function MemorialPageInner() {
             <div className="mx-auto flex max-w-lg flex-col items-center gap-6 text-center">
               <p className="text-sm text-muted">כלים לבעל/ת הדף</p>
               <QrCodeCard slug={slug} fullName={fullName} coverPhotoUrl={memorial.coverPhotoUrl} />
-              {!hasMemoryWall && <EnableMemoryWallCard slug={slug} />}
+              <MemoryWallToggleCard slug={slug} enabled={hasMemoryWall} />
               <Link
                 href={`/memorial/edit?slug=${encodeURIComponent(slug)}`}
                 className="rounded-full border border-border px-6 py-2.5 text-sm font-semibold hover:border-gold hover:text-gold-soft transition-colors"

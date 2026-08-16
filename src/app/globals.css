@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  /* Warm, soft dark palette — deliberately not the stark black associated
-     with mourning, and not bright/cheerful either. A calm middle ground. */
-  --background: #1a1611;
-  --surface: #221d17;
-  --surface-2: #2a241c;
-  --foreground: #f3ece0;
-  --muted: #b3a996;
-  --gold: #d4af6a;
-  --gold-soft: #e9c98a;
-  --flame: #f0a256;
-  --border: #3a3226;
+  /* Warm, light "keepsake album" palette — deliberately not the black
+     background associated with mourning/Yom HaZikaron imagery, and not
+     bright or cheerful either. Warm paper tones, not a dark theme at all. */
+  --background: #f2ead9;
+  --surface: #fbf7ee;
+  --surface-2: #ece1c7;
+  --foreground: #362c1f;
+  --muted: #7d705a;
+  --gold: #9c6f18;
+  --gold-soft: #b0801f;
+  --flame: #d1791f;
+  --border: #ddcda3;
 }
 
 @theme inline {
