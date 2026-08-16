@@ -3,30 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import QRCodeStyling, { type Options } from "qr-code-styling";
 import { memorialAbsoluteUrl } from "@/lib/base-url";
+import { renderPhotoQr } from "@/lib/photo-qr";
 
-const QR_SIZE = 220;
+const QR_SIZE = 260;
 
-function buildOptions(url: string, logoDataUrl: string | null): Partial<Options> {
-  return {
-    width: QR_SIZE,
-    height: QR_SIZE,
-    type: "canvas",
-    data: url,
-    margin: 8,
-    qrOptions: { errorCorrectionLevel: logoDataUrl ? "H" : "M" },
-    dotsOptions: { color: "#2a2013", type: "rounded" },
-    cornersSquareOptions: { color: "#b8873f", type: "extra-rounded" },
-    cornersDotOptions: { color: "#b8873f", type: "dot" },
-    backgroundOptions: { color: "#ffffff" },
-    image: logoDataUrl ?? undefined,
-    imageOptions: {
-      crossOrigin: "anonymous",
-      margin: 6,
-      imageSize: 0.35,
-      hideBackgroundDots: true,
-    },
-  };
-}
+const STYLED_OPTIONS = (url: string): Partial<Options> => ({
+  width: QR_SIZE,
+  height: QR_SIZE,
+  type: "canvas",
+  data: url,
+  margin: 8,
+  qrOptions: { errorCorrectionLevel: "M" },
+  dotsOptions: { color: "#241a10", type: "rounded" },
+  cornersSquareOptions: { color: "#9c6f18", type: "extra-rounded" },
+  cornersDotOptions: { color: "#9c6f18", type: "dot" },
+  backgroundOptions: { color: "#fdf8ee" },
+});
 
 function fileToDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -34,6 +26,15 @@ function fileToDataUrl(file: Blob): Promise<string> {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("image load failed"));
+    img.src = src;
   });
 }
 
@@ -47,83 +48,120 @@ export function QrCodeCard({
   coverPhotoUrl?: string | null;
 }) {
   const url = memorialAbsoluteUrl(slug);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const qrRef = useRef<QRCodeStyling | null>(null);
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
-  const [loadingLogo, setLoadingLogo] = useState(false);
-  const [logoError, setLogoError] = useState<string | null>(null);
+  const styledContainerRef = useRef<HTMLDivElement>(null);
+  const styledQrRef = useRef<QRCodeStyling | null>(null);
+  const photoCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Rebuilding the whole instance (rather than calling .update()) on every
-  // change is simpler to reason about and cheap enough for something that
-  // only changes when the owner picks a different embedded image.
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [loadingPhoto, setLoadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  // Default styled look — only rendered while no photo has been chosen.
   useEffect(() => {
-    const qr = new QRCodeStyling(buildOptions(url, logoDataUrl));
-    qrRef.current = qr;
-    if (containerRef.current) {
-      containerRef.current.innerHTML = "";
-      qr.append(containerRef.current);
+    if (photoDataUrl) return;
+    const qr = new QRCodeStyling(STYLED_OPTIONS(url));
+    styledQrRef.current = qr;
+    if (styledContainerRef.current) {
+      styledContainerRef.current.innerHTML = "";
+      qr.append(styledContainerRef.current);
     }
-  }, [url, logoDataUrl]);
+  }, [url, photoDataUrl]);
+
+  // The QR code itself is built from the photo once one is chosen — see
+  // src/lib/photo-qr.ts for how the modules are rendered from it.
+  useEffect(() => {
+    if (!photoDataUrl || !photoCanvasRef.current) return;
+    let cancelled = false;
+    loadImage(photoDataUrl)
+      .then((img) => {
+        if (cancelled || !photoCanvasRef.current) return;
+        renderPhotoQr(photoCanvasRef.current, url, img, img.naturalWidth, img.naturalHeight);
+      })
+      .catch(() => {
+        if (!cancelled) setPhotoError("לא הצלחנו לצייר את הברקוד מהתמונה. נסו תמונה אחרת.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [url, photoDataUrl]);
 
   function handleDownload() {
-    qrRef.current?.download({ name: `ברקוד-${fullName}`, extension: "png" });
+    if (photoDataUrl && photoCanvasRef.current) {
+      const link = document.createElement("a");
+      link.download = `ברקוד-${fullName}.png`;
+      link.href = photoCanvasRef.current.toDataURL("image/png");
+      link.click();
+      return;
+    }
+    styledQrRef.current?.download({ name: `ברקוד-${fullName}`, extension: "png" });
   }
 
   async function handleUseCoverPhoto() {
     if (!coverPhotoUrl) return;
-    setLoadingLogo(true);
-    setLogoError(null);
+    setLoadingPhoto(true);
+    setPhotoError(null);
     try {
       const res = await fetch(coverPhotoUrl, { mode: "cors" });
       const blob = await res.blob();
-      setLogoDataUrl(await fileToDataUrl(blob));
+      setPhotoDataUrl(await fileToDataUrl(blob));
     } catch {
-      setLogoError("לא הצלחנו לטעון את התמונה הראשית להטבעה. אפשר להעלות תמונה אחרת.");
+      setPhotoError("לא הצלחנו לטעון את התמונה הראשית. אפשר להעלות תמונה אחרת.");
     } finally {
-      setLoadingLogo(false);
+      setLoadingPhoto(false);
     }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setLogoError(null);
+    setPhotoError(null);
     fileToDataUrl(file)
-      .then(setLogoDataUrl)
-      .catch(() => setLogoError("לא ניתן לקרוא את הקובץ שנבחר."));
+      .then(setPhotoDataUrl)
+      .catch(() => setPhotoError("לא ניתן לקרוא את הקובץ שנבחר."));
   }
 
   return (
     <div className="section-card flex flex-col items-center gap-4 rounded-2xl p-6 text-center">
-      <p className="text-sm text-muted">ברקוד מעוצב להדבקה על המצבה</p>
-      <div ref={containerRef} className="overflow-hidden rounded-xl bg-white p-3" />
+      <p className="text-sm text-muted">
+        {photoDataUrl ? "הברקוד עצמו בנוי מהתמונה שבחרתם" : "ברקוד מעוצב להדבקה על המצבה"}
+      </p>
+
+      <div className="overflow-hidden rounded-xl p-3" style={{ background: "#fdf8ee" }}>
+        <div ref={styledContainerRef} className={photoDataUrl ? "hidden" : ""} />
+        <canvas
+          ref={photoCanvasRef}
+          className={photoDataUrl ? "block" : "hidden"}
+          style={{ width: QR_SIZE, height: QR_SIZE }}
+        />
+      </div>
+      {loadingPhoto && <p className="text-xs text-muted">טוען תמונה...</p>}
 
       <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted">
         {coverPhotoUrl && (
           <button
             type="button"
             onClick={handleUseCoverPhoto}
-            disabled={loadingLogo}
+            disabled={loadingPhoto}
             className="rounded-full border border-border px-3 py-1.5 transition-colors hover:border-gold hover:text-gold-soft disabled:opacity-60"
           >
-            {loadingLogo ? "טוען..." : "הטבעת התמונה הראשית"}
+            הפיכת התמונה הראשית לברקוד
           </button>
         )}
         <label className="cursor-pointer rounded-full border border-border px-3 py-1.5 transition-colors hover:border-gold hover:text-gold-soft">
-          העלאת תמונה להטבעה
+          העלאת תמונה אחרת לברקוד
           <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
         </label>
-        {logoDataUrl && (
+        {photoDataUrl && (
           <button
             type="button"
-            onClick={() => setLogoDataUrl(null)}
+            onClick={() => setPhotoDataUrl(null)}
             className="rounded-full border border-border px-3 py-1.5 transition-colors hover:border-gold hover:text-gold-soft"
           >
-            הסרת התמונה
+            חזרה לברקוד רגיל
           </button>
         )}
       </div>
-      {logoError && <p className="text-xs text-red-400">{logoError}</p>}
+      {photoError && <p className="text-xs text-red-400">{photoError}</p>}
 
       <button
         onClick={handleDownload}

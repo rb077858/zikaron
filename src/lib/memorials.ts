@@ -114,6 +114,22 @@ export async function updateMemorial(
   });
 }
 
+/**
+ * Turns "share a memory" back off. Unlike enabling it (a paid, Worker-only
+ * action — see credits.ts's enableMemoryWallViaWorker), disabling is free
+ * and direct: firestore.rules lets the owner flip memoryWallEnabled to
+ * false themselves, but never back to true. The 2 credits already spent to
+ * enable it are NOT refunded, same as page deletion never refunding the
+ * credits spent to create it. Existing memories are left in place —
+ * they'd reappear if the feature is enabled again later.
+ */
+export async function disableMemoryWall(slug: string): Promise<void> {
+  await updateDoc(doc(db, "memorials", slug), {
+    memoryWallEnabled: false,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function deleteMemorial(slug: string): Promise<void> {
   // Firestore rejects `list` queries outright unless a `where` filter lets it
   // prove the security rule holds without fetching each document — an

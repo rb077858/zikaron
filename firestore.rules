@@ -28,14 +28,17 @@ service cloud.firestore {
 
       // Editing and deleting stay free, direct, owner-only operations —
       // no money involved, so no need to route them through the Worker.
-      // memoryWallEnabled is the one exception: enabling it costs credits,
-      // so it must stay pinned to its current value here — only the Worker
-      // (via its service account, which bypasses these rules) can flip it,
-      // the same way memorial creation itself is Worker-only.
+      // memoryWallEnabled is the one exception: *turning it on* costs
+      // credits, so a direct client write may never flip it false -> true —
+      // only the Worker (via its service account, which bypasses these
+      // rules) can do that, the same way memorial creation itself is
+      // Worker-only. Turning it back *off* is free (and never refunds the
+      // credits already spent), so the owner may set it to false directly.
       allow update: if isOwner(resource.data)
         && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.get('memoryWallEnabled', false)
-          == resource.data.get('memoryWallEnabled', false);
+        && (request.resource.data.get('memoryWallEnabled', false)
+              == resource.data.get('memoryWallEnabled', false)
+            || request.resource.data.get('memoryWallEnabled', false) == false);
 
       allow delete: if isOwner(resource.data);
 
