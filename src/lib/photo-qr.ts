@@ -138,7 +138,11 @@ export type PhotoQrOptions = {
 
 const DEFAULTS: Required<PhotoQrOptions> = {
   cellPx: 22,
-  quietZoneModules: 4,
+  // The spec-recommended quiet zone is 4 modules, but most real-world
+  // scanners (including phone cameras) tolerate less — 2 keeps the plain
+  // border thin so the photo fills nearly the whole image instead of
+  // leaving a large empty frame around it.
+  quietZoneModules: 2,
   darkColor: "#241a10",
   lightColor: "#fdf8ee",
   dotScale: 0.72,

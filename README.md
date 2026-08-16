@@ -172,7 +172,10 @@ PayPal אכן התקבל לפני שנזקפים קרדיטים. אחרי ההג
 - `src/app/` — הדפים: `/` (נחיתה), `/dashboard` (הדפים שלי), `/create`
   (יצירת דף), `/credits` (רכישת קרדיטים), `/memorial` (דף הנצחה ציבורי,
   `?slug=`), `/memorial/edit`.
-- `firestore.rules`, `firestore.indexes.json` — חוקי אבטחה ואינדקסים ל-Firestore.
+- `firestore.rules` — חוקי אבטחה ל-Firestore (חובה להעתיק ל-Console בכל שינוי, ראו
+  שלב 1 למעלה). `firestore.indexes.json` ריק בכוונה — כל השאילתות בנויות כך
+  שלא דורשות אינדקס מורכב (מיון נעשה בצד הלקוח), כדי לא להסתמך על אינדקס
+  שאף אחד לא באמת יצר ב-Firebase Console.
 - `worker/` — ה-Cloudflare Worker (ראו `worker/README.md`).
 - `.github/workflows/deploy.yml` — בנייה ופרסום האתר ל-GitHub Pages.
 - `.github/workflows/deploy-worker.yml` — פרסום ה-Worker ל-Cloudflare.
