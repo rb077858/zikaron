@@ -1,5 +1,5 @@
 import type { Env } from "./env";
-import { verifyFirebaseIdToken, getBearerToken } from "./firebase-auth";
+import { verifyFirebaseIdToken, getBearerToken, type VerifiedUser } from "./firebase-auth";
 import { getGoogleAccessToken } from "./google-token";
 import {
   FirestoreClient,
@@ -14,6 +14,7 @@ import {
 } from "./firestore";
 import { capturePayPalOrder } from "./paypal";
 import { slugify } from "./slug";
+import { lookupUserByEmail, setUserDisabled } from "./identity-toolkit";
 
 const CREDITS_PER_MEMORIAL = 5;
 const MEMORY_WALL_COST = 2;
@@ -41,6 +42,36 @@ async function getFirestoreClient(env: Env): Promise<FirestoreClient> {
     "https://www.googleapis.com/auth/datastore"
   );
   return new FirestoreClient(env.FIREBASE_PROJECT_ID, accessToken);
+}
+
+// Identity Toolkit (user lookup/block) needs its own OAuth token — a
+// separate scope from the Firestore one above, and a separate IAM grant
+// ("Firebase Authentication Admin") on the service account. See README.
+async function getIdentityToolkitToken(env: Env): Promise<string> {
+  return getGoogleAccessToken(
+    env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
+    "https://www.googleapis.com/auth/identitytoolkit"
+  );
+}
+
+type AdminAuthResult = { ok: true; user: VerifiedUser } | { ok: false; response: Response };
+
+async function requireAdmin(request: Request, env: Env): Promise<AdminAuthResult> {
+  const token = getBearerToken(request);
+  if (!token) return { ok: false, response: json(env, { error: "UNAUTHENTICATED" }, 401) };
+
+  let user: VerifiedUser;
+  try {
+    user = await verifyFirebaseIdToken(token, env.FIREBASE_PROJECT_ID);
+  } catch {
+    return { ok: false, response: json(env, { error: "INVALID_TOKEN" }, 401) };
+  }
+
+  if (user.email !== env.ADMIN_EMAIL) {
+    return { ok: false, response: json(env, { error: "FORBIDDEN" }, 403) };
+  }
+  return { ok: true, user };
 }
 
 type MemorialFormInput = {
@@ -356,6 +387,120 @@ async function handlePurchaseCredits(request: Request, env: Env): Promise<Respon
   return json(env, { error: "CREDIT_FAILED_RETRY_EXCEEDED" }, 500);
 }
 
+function normalizeEmail(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null;
+}
+
+/**
+ * Admin-only: look up any user by email — their credit balance and whether
+ * their account is currently blocked. Resolving email -> uid goes through
+ * Identity Toolkit (Firestore has no index on email, and credits are keyed
+ * by uid), then the balance comes from Firestore as usual.
+ */
+async function handleAdminLookupUser(request: Request, env: Env): Promise<Response> {
+  const auth = await requireAdmin(request, env);
+  if (!auth.ok) return auth.response;
+
+  const body = (await request.json().catch(() => null)) as { email?: string } | null;
+  const email = normalizeEmail(body?.email);
+  if (!email) return json(env, { error: "INVALID_INPUT" }, 400);
+
+  let found;
+  try {
+    const idToolkitToken = await getIdentityToolkitToken(env);
+    found = await lookupUserByEmail(email, idToolkitToken, env.FIREBASE_PROJECT_ID);
+  } catch (err) {
+    console.error(err);
+    return json(env, { error: "LOOKUP_FAILED" }, 500);
+  }
+  if (!found) return json(env, { error: "USER_NOT_FOUND" }, 404);
+
+  const db = await getFirestoreClient(env);
+  const userDoc = await db.get(`users/${found.uid}`);
+  const credits = userDoc.exists ? Number(userDoc.fields.credits ?? 0) : 0;
+
+  return json(env, { uid: found.uid, email, credits, blocked: found.disabled });
+}
+
+/**
+ * Admin-only: directly set a user's credit balance (add, reduce, or clear
+ * to 0) by email. Unlike every other credits write in this Worker, this one
+ * is intentionally not tied to any verified real-world event (a payment, a
+ * page action) — it's a manual override, and it's safe only because it's
+ * gated to the one trusted admin account.
+ */
+async function handleAdminSetCredits(request: Request, env: Env): Promise<Response> {
+  const auth = await requireAdmin(request, env);
+  if (!auth.ok) return auth.response;
+
+  const body = (await request.json().catch(() => null)) as
+    | { email?: string; credits?: number }
+    | null;
+  const email = normalizeEmail(body?.email);
+  const credits = Number(body?.credits);
+  if (!email || !Number.isInteger(credits) || credits < 0) {
+    return json(env, { error: "INVALID_INPUT" }, 400);
+  }
+
+  let found;
+  try {
+    const idToolkitToken = await getIdentityToolkitToken(env);
+    found = await lookupUserByEmail(email, idToolkitToken, env.FIREBASE_PROJECT_ID);
+  } catch (err) {
+    console.error(err);
+    return json(env, { error: "LOOKUP_FAILED" }, 500);
+  }
+  if (!found) return json(env, { error: "USER_NOT_FOUND" }, 404);
+
+  const db = await getFirestoreClient(env);
+  try {
+    await db.commit([
+      {
+        updatePath: `users/${found.uid}`,
+        fields: { credits: fsInt(credits) },
+        updateMask: ["credits"],
+      },
+    ]);
+  } catch (err) {
+    console.error(err);
+    return json(env, { error: "SET_CREDITS_FAILED" }, 500);
+  }
+
+  return json(env, { success: true, uid: found.uid, credits });
+}
+
+/**
+ * Admin-only: block or unblock an account by email — e.g. someone
+ * repeatedly creating inappropriate pages. Disabling the Firebase Auth
+ * account prevents all future sign-in; it does not retroactively invalidate
+ * an already-issued ID token (those simply expire on their own, within an
+ * hour).
+ */
+async function handleAdminSetBlocked(request: Request, env: Env): Promise<Response> {
+  const auth = await requireAdmin(request, env);
+  if (!auth.ok) return auth.response;
+
+  const body = (await request.json().catch(() => null)) as
+    | { email?: string; blocked?: boolean }
+    | null;
+  const email = normalizeEmail(body?.email);
+  const blocked = body?.blocked;
+  if (!email || typeof blocked !== "boolean") {
+    return json(env, { error: "INVALID_INPUT" }, 400);
+  }
+
+  try {
+    const idToolkitToken = await getIdentityToolkitToken(env);
+    const found = await lookupUserByEmail(email, idToolkitToken, env.FIREBASE_PROJECT_ID);
+    if (!found) return json(env, { error: "USER_NOT_FOUND" }, 404);
+    await setUserDisabled(found.uid, blocked, idToolkitToken, env.FIREBASE_PROJECT_ID);
+    return json(env, { success: true, uid: found.uid, blocked });
+  } catch (err) {
+    console.error(err);
+    return json(env, { error: "SET_BLOCKED_FAILED" }, 500);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === "OPTIONS") {
@@ -371,6 +516,15 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/api/purchase-credits") {
       return handlePurchaseCredits(request, env);
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/lookup-user") {
+      return handleAdminLookupUser(request, env);
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/set-credits") {
+      return handleAdminSetCredits(request, env);
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/set-blocked") {
+      return handleAdminSetBlocked(request, env);
     }
     return json(env, { error: "NOT_FOUND" }, 404);
   },

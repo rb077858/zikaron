@@ -88,7 +88,12 @@ function MemorialPageInner() {
         <YahrzeitSection memorial={memorial} />
         <GraveSection memorial={memorial} />
         {hasMemoryWall && (
-          <MemoryWallSection memorial={memorial} fullName={fullName} memories={memories} />
+          <MemoryWallSection
+            memorial={memorial}
+            fullName={fullName}
+            memories={memories}
+            isOwner={isOwner}
+          />
         )}
         <ShareRow slug={slug} fullName={fullName} />
 

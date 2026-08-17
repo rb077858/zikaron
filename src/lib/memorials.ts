@@ -228,9 +228,17 @@ export async function uploadCoverPhoto(slug: string, file: File): Promise<void> 
   await updateDoc(doc(db, "memorials", slug), { coverPhotoUrl: url, updatedAt: serverTimestamp() });
 }
 
+export async function removeCoverPhoto(slug: string): Promise<void> {
+  await updateDoc(doc(db, "memorials", slug), { coverPhotoUrl: null, updatedAt: serverTimestamp() });
+}
+
 export async function uploadGraveImage(slug: string, file: File): Promise<void> {
   const url = await uploadFile(slug, "grave", file);
   await updateDoc(doc(db, "memorials", slug), { graveImageUrl: url, updatedAt: serverTimestamp() });
+}
+
+export async function removeGraveImage(slug: string): Promise<void> {
+  await updateDoc(doc(db, "memorials", slug), { graveImageUrl: null, updatedAt: serverTimestamp() });
 }
 
 export async function uploadLifeStoryAudio(slug: string, file: File): Promise<void> {

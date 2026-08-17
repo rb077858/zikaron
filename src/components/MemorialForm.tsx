@@ -7,7 +7,9 @@ import { useCurrentUser } from "@/lib/use-auth";
 import {
   updateMemorial,
   uploadCoverPhoto,
+  removeCoverPhoto,
   uploadGraveImage,
+  removeGraveImage,
   uploadLifeStoryAudio,
   addGalleryPhotos,
   deletePhoto,
@@ -83,7 +85,9 @@ export function MemorialForm({
     typeof initial?.tehilimChapter === "number"
   );
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
   const [graveFile, setGraveFile] = useState<File | null>(null);
+  const [graveRemoved, setGraveRemoved] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos ?? []);
@@ -167,6 +171,20 @@ export function MemorialForm({
     if (!slug) return;
     await deletePhoto(slug, photo.id);
     setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+  }
+
+  async function handleRemoveCover() {
+    if (!slug) return;
+    await removeCoverPhoto(slug);
+    setCoverFile(null);
+    setCoverRemoved(true);
+  }
+
+  async function handleRemoveGrave() {
+    if (!slug) return;
+    await removeGraveImage(slug);
+    setGraveFile(null);
+    setGraveRemoved(true);
   }
 
   return (
@@ -341,15 +359,29 @@ export function MemorialForm({
               type="file"
               accept="image/*"
               className="text-sm text-muted"
-              onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setCoverFile(e.target.files?.[0] ?? null);
+                setCoverRemoved(false);
+              }}
             />
-            {(coverFile || initialCoverUrl) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={coverFile ? URL.createObjectURL(coverFile) : initialCoverUrl!}
-                alt=""
-                className="mt-2 h-28 w-28 rounded-lg object-cover"
-              />
+            {(coverFile || (initialCoverUrl && !coverRemoved)) && (
+              <div className="mt-2 flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverFile ? URL.createObjectURL(coverFile) : initialCoverUrl!}
+                  alt=""
+                  className="h-28 w-28 rounded-lg object-cover"
+                />
+                {mode === "edit" && !coverFile && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveCover}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs text-muted transition-colors hover:border-red-500/50 hover:text-red-500"
+                  >
+                    הסרה
+                  </button>
+                )}
+              </div>
             )}
           </Field>
           <Field label="תמונת המצבה (אופציונלי)">
@@ -357,15 +389,29 @@ export function MemorialForm({
               type="file"
               accept="image/*"
               className="text-sm text-muted"
-              onChange={(e) => setGraveFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setGraveFile(e.target.files?.[0] ?? null);
+                setGraveRemoved(false);
+              }}
             />
-            {(graveFile || initialGraveImageUrl) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={graveFile ? URL.createObjectURL(graveFile) : initialGraveImageUrl!}
-                alt=""
-                className="mt-2 h-28 w-28 rounded-lg object-cover"
-              />
+            {(graveFile || (initialGraveImageUrl && !graveRemoved)) && (
+              <div className="mt-2 flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={graveFile ? URL.createObjectURL(graveFile) : initialGraveImageUrl!}
+                  alt=""
+                  className="h-28 w-28 rounded-lg object-cover"
+                />
+                {mode === "edit" && !graveFile && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveGrave}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs text-muted transition-colors hover:border-red-500/50 hover:text-red-500"
+                  >
+                    הסרה
+                  </button>
+                )}
+              </div>
             )}
           </Field>
         </div>

@@ -42,7 +42,7 @@ export class WorkerRequestError extends Error {
   }
 }
 
-async function workerFetch(path: string, idToken: string, body: unknown) {
+export async function workerFetch(path: string, idToken: string, body: unknown) {
   if (!WORKER_URL) {
     throw new Error(
       "NEXT_PUBLIC_WORKER_URL is not configured — see README for Cloudflare Worker setup"
