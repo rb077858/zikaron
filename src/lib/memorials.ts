@@ -8,7 +8,6 @@ import {
   addDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
   serverTimestamp,
   writeBatch,
@@ -169,17 +168,23 @@ export function subscribeToMemorial(
 // filter on the query itself — otherwise Firestore rejects the whole query
 // up front. Every memorial is published (there is no draft/unpublish
 // feature), so this filter is always satisfied in practice.
+//
+// Sorting happens client-side rather than via `orderBy(...)` on the query.
+// Combining an equality `where` with `orderBy` on a *different* field
+// requires a composite index that Firestore does not create automatically —
+// it has to be deployed or manually added in the console, a step that's
+// easy to miss (and was missed) since this project never wires up the
+// Firebase CLI. With only a handful of docs per memorial, sorting the
+// already-fetched array in JS is free and needs no index at all.
 export function subscribeToPhotos(
   slug: string,
   cb: (photos: Photo[]) => void
 ): Unsubscribe {
-  const q = query(
-    collection(db, "memorials", slug, "photos"),
-    where("published", "==", true),
-    orderBy("order", "asc")
-  );
+  const q = query(collection(db, "memorials", slug, "photos"), where("published", "==", true));
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Photo, "id">) })));
+    const photos = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Photo, "id">) }));
+    photos.sort((a, b) => a.order - b.order);
+    cb(photos);
   });
 }
 
@@ -187,24 +192,23 @@ export function subscribeToMemories(
   slug: string,
   cb: (memories: Memory[]) => void
 ): Unsubscribe {
-  const q = query(
-    collection(db, "memorials", slug, "memories"),
-    where("published", "==", true),
-    orderBy("createdAt", "desc")
-  );
+  const q = query(collection(db, "memorials", slug, "memories"), where("published", "==", true));
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Memory, "id">) })));
+    const memories = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Memory, "id">) }));
+    // A just-written doc can briefly read back with createdAt still null
+    // (pending server timestamp) — treat that as "now" so it sorts first
+    // rather than crashing or jumping to the bottom.
+    memories.sort((a, b) => (b.createdAt?.toMillis() ?? Date.now()) - (a.createdAt?.toMillis() ?? Date.now()));
+    cb(memories);
   });
 }
 
 export async function getUserMemorials(ownerId: string): Promise<Memorial[]> {
-  const q = query(
-    collection(db, "memorials"),
-    where("ownerId", "==", ownerId),
-    orderBy("createdAt", "desc")
-  );
+  const q = query(collection(db, "memorials"), where("ownerId", "==", ownerId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as Memorial);
+  const memorials = snap.docs.map((d) => d.data() as Memorial);
+  memorials.sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
+  return memorials;
 }
 
 export async function deletePhoto(slug: string, photoId: string): Promise<void> {
