@@ -215,6 +215,13 @@ export async function deletePhoto(slug: string, photoId: string): Promise<void> 
   await deleteDoc(doc(db, "memorials", slug, "photos", photoId));
 }
 
+/** Swaps a gallery photo's image in place — same doc, same position. */
+export async function replacePhoto(slug: string, photoId: string, file: File): Promise<string> {
+  const url = await uploadFile(slug, "gallery", file);
+  await updateDoc(doc(db, "memorials", slug, "photos", photoId), { url });
+  return url;
+}
+
 export async function deleteMemory(slug: string, memoryId: string): Promise<void> {
   await deleteDoc(doc(db, "memorials", slug, "memories", memoryId));
 }
