@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addMemory, type Memory, type Memorial } from "@/lib/memorials";
+import { addMemory, deleteMemory, type Memory, type Memorial } from "@/lib/memorials";
 
 const MAX_PHOTOS = 4;
 
@@ -9,10 +9,12 @@ export function MemoryWallSection({
   memorial,
   fullName,
   memories,
+  isOwner,
 }: {
   memorial: Memorial;
   fullName: string;
   memories: Memory[];
+  isOwner: boolean;
 }) {
   const slug = memorial.slug;
   const [name, setName] = useState("");
@@ -22,6 +24,12 @@ export function MemoryWallSection({
   const [error, setError] = useState<string | null>(null);
   const [justShared, setJustShared] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  async function handleDeleteMemory(memoryId: string) {
+    await deleteMemory(slug, memoryId);
+    setConfirmDeleteId(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,9 +113,40 @@ export function MemoryWallSection({
             {memories.map((m, i) => (
               <div
                 key={m.id}
-                className="memory-card section-card overflow-hidden rounded-2xl transition-all hover:border-gold/50 hover:shadow-[0_8px_24px_rgba(54,44,31,0.12)]"
+                className="memory-card section-card relative overflow-hidden rounded-2xl transition-all hover:border-gold/50 hover:shadow-[0_8px_24px_rgba(54,44,31,0.12)]"
                 style={{ animationDelay: `${Math.min(i, 10) * 70}ms` }}
               >
+                {isOwner && (
+                  <div className="absolute left-2 top-2 z-10">
+                    {confirmDeleteId === m.id ? (
+                      <div className="flex items-center gap-1 rounded-full bg-surface/95 p-1 shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMemory(m.id)}
+                          className="rounded-full border border-red-500/50 px-2.5 py-1 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500/10"
+                        >
+                          מחיקה
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="rounded-full border border-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-gold hover:text-gold-soft"
+                        >
+                          ביטול
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(m.id)}
+                        aria-label="מחיקת הזיכרון"
+                        className="flex size-8 items-center justify-center rounded-full bg-surface/90 text-muted shadow-sm transition-colors hover:text-red-500"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
                 {m.photoUrls.length > 0 && (
                   <div
                     className={`grid gap-0.5 ${

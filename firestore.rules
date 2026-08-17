@@ -52,6 +52,15 @@ service cloud.firestore {
         allow create: if isOwner(request.resource.data)
           && request.resource.data.url is string;
 
+        // Replacing a photo swaps its url in place (keeps the same doc,
+        // same position in the gallery) rather than delete-then-re-add.
+        // Everything except url/caption stays pinned to its current value.
+        allow update: if isOwner(resource.data)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.published == resource.data.published
+          && request.resource.data.order == resource.data.order
+          && request.resource.data.url is string;
+
         allow delete: if isOwner(resource.data);
       }
 

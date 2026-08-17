@@ -44,7 +44,14 @@ export function SiteHeader() {
               >
                 דפי ההנצחה שלי
               </Link>
-              {user.email !== ADMIN_EMAIL && (
+              {user.email === ADMIN_EMAIL ? (
+                <Link
+                  href="/admin"
+                  className="rounded-full border border-gold/40 px-4 py-1.5 text-sm font-medium text-gold-soft hover:border-gold transition-colors"
+                >
+                  ⚙️ ניהול
+                </Link>
+              ) : (
                 <Link
                   href="/credits"
                   className="rounded-full border border-gold/40 px-4 py-1.5 text-sm font-medium text-gold-soft hover:border-gold transition-colors"
