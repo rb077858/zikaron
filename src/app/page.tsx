@@ -81,7 +81,7 @@ export default function Home() {
                   disabled={unavailable}
                   className="rounded-full bg-gold px-7 py-3 text-base font-semibold text-[#1a1206] shadow-lg shadow-gold/20 transition-colors hover:bg-gold-soft disabled:opacity-60"
                 >
-                  התחברות והתחלה
+                  התחברות עם reem.bi
                 </button>
               )}
               <span className="text-sm text-muted">

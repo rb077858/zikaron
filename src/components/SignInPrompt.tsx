@@ -13,7 +13,7 @@ export function SignInPrompt({ message }: { message: string }) {
         disabled={unavailable}
         className="rounded-full bg-gold px-6 py-2.5 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors disabled:opacity-60"
       >
-        התחברות
+        התחברות עם reem.bi
       </button>
       {unavailable && (
         <p className="text-xs text-muted">ההתחברות אינה זמינה כרגע. נסו שוב מאוחר יותר.</p>

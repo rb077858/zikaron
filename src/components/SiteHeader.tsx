@@ -38,9 +38,9 @@ export function SiteHeader() {
               <button
                 onClick={signIn}
                 disabled={unavailable}
-                className="rounded-full bg-gold px-4 py-1.5 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors disabled:opacity-60"
+                className="whitespace-nowrap rounded-full bg-gold px-3 sm:px-4 py-1.5 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors disabled:opacity-60"
               >
-                התחברות
+                התחברות עם reem.bi
               </button>
               {unavailable && (
                 <span className="mt-0.5 text-[11px] text-muted">ההתחברות לא זמינה כרגע</span>
