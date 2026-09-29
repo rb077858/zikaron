@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CandleFlame } from "@/components/CandleFlame";
+import { SUPPORT_EMAIL } from "@/lib/contact";
 import { useCurrentUser, signIn, signOutUser, accountUrl, type SiteUser } from "@/lib/use-auth";
 
 const AUTH_ERRORS: Record<string, string> = {
-  no_access: "לחשבון הזה אין גישה לאתר. לפרטים פנו אלינו.",
+  no_access: "לחשבון הזה אין גישה לאתר.",
 };
 
 export function SiteHeader() {
@@ -51,7 +52,10 @@ export function SiteHeader() {
       </div>
       {error && (
         <p className="border-t border-border bg-red-500/10 px-4 py-2 text-center text-sm text-red-500">
-          {AUTH_ERRORS[error] ?? "ההתחברות נכשלה. נסו שוב."}
+          {AUTH_ERRORS[error] ?? "ההתחברות נכשלה. נסו שוב."} לעזרה:{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="underline" dir="ltr">
+            {SUPPORT_EMAIL}
+          </a>
         </p>
       )}
     </header>
@@ -133,6 +137,9 @@ function UserMenu({ user }: { user: SiteUser }) {
           </Link>
           <a href={accountUrl()} className={itemClass}>
             החשבון שלי
+          </a>
+          <a href={`mailto:${SUPPORT_EMAIL}`} className={itemClass}>
+            תמיכה
           </a>
           <button
             onClick={() => {

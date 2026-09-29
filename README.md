@@ -134,7 +134,8 @@ HTML/JS סטטיים, שמתארחים ב-GitHub Pages תחת `zikaron.reembir.c
   | `unlimited` | בוליאני | `false` | בלי שום מגבלה (מחליף את המנהל הקבוע הישן) |
 
 - **שדרוג**: אין תשלום באתר. העמוד `/upgrade` מציג את החבילה הנוכחית ומפנה
-  לפנייה במייל (`CONTACT_EMAIL` ב-`src/lib/worker-api.ts`), ואת השדרוג עצמו
+  לפנייה במייל `billing@zikaron.reembir.com` (`BILLING_EMAIL` ב-`src/lib/contact.ts`,
+  לצד `SUPPORT_EMAIL` לתמיכה כללית), ואת השדרוג עצמו
   עושים בדשבורד.
 - **טוקן Firebase**: reem.bi מנפיק לדפדפן custom token לפרויקט ה-Firebase של
   האתר (uid = מזהה המשתמש ב-reem.bi, עם `sso_email` ב-claims). לשם כך

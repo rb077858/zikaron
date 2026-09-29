@@ -17,6 +17,7 @@ import {
   type MemorialFormInput,
   type Photo,
 } from "@/lib/memorials";
+import { SUPPORT_EMAIL } from "@/lib/contact";
 import {
   createMemorialViaWorker,
   canCreateMemorial,
@@ -144,9 +145,9 @@ export function MemorialForm({
       router.push(`/memorial?slug=${encodeURIComponent(targetSlug)}`);
     } catch (err) {
       if (err instanceof WorkerRequestError && err.code === "LIMIT_REACHED") {
-        setError("הגעתם למספר דפי ההנצחה שהחבילה שלכם מאפשרת. לשדרוג, פנו אלינו בעמוד החבילה.");
+        setError("הגעתם למספר דפי ההנצחה שהחבילה שלכם מאפשרת. לשדרוג, ראו את עמוד החבילה.");
       } else if (err instanceof WorkerRequestError && err.code === "NO_ACCESS") {
-        setError("לחשבון הזה אין גישה לאתר. לפרטים פנו אלינו.");
+        setError(`לחשבון הזה אין גישה לאתר. לעזרה: ${SUPPORT_EMAIL}`);
       } else {
         console.error(err);
         setError("משהו השתבש בשמירה. נסו שוב.");

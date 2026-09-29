@@ -7,10 +7,6 @@ import type { MemorialFormInput } from "@/lib/memorials";
 // Every call carries the reem.bi token, which the Worker verifies with
 // login.reembir.com.
 
-// Upgrades are handled personally (no online payment) — this is where the
-// upgrade page and limit messages send people.
-export const CONTACT_EMAIL = "rb077858@gmail.com";
-
 export type AccountStatus = {
   memorialCount: number;
   /** null = unlimited */
