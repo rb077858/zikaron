@@ -2,8 +2,8 @@
 
 import { SiteHeader } from "@/components/SiteHeader";
 import { MemorialForm } from "@/components/MemorialForm";
-import { useCurrentUser, signInWithGoogle } from "@/lib/use-auth";
-import { GoogleIcon } from "@/components/GoogleIcon";
+import { useCurrentUser } from "@/lib/use-auth";
+import { SignInPrompt } from "@/components/SignInPrompt";
 
 export default function CreatePage() {
   const { user, loading } = useCurrentUser();
@@ -21,16 +21,7 @@ export default function CreatePage() {
     return (
       <div className="flex min-h-screen flex-col">
         <SiteHeader />
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-5 text-center">
-          <p className="text-lg text-muted">כדי ליצור דף הנצחה יש להתחבר תחילה</p>
-          <button
-            onClick={() => signInWithGoogle()}
-            className="flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors"
-          >
-            <GoogleIcon className="size-4" />
-            התחברות עם Google
-          </button>
-        </div>
+        <SignInPrompt message="כדי ליצור דף הנצחה יש להתחבר תחילה" />
       </div>
     );
   }

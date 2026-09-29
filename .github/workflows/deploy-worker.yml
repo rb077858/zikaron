@@ -43,10 +43,8 @@ jobs:
           # @cloudflare/workers-types this project uses.
           wranglerVersion: "4.123.0"
           secrets: |
-            PAYPAL_CLIENT_SECRET
             GOOGLE_SERVICE_ACCOUNT_EMAIL
             GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
         env:
-          PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET }}
           GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
           GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY }}
