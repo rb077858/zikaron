@@ -8,7 +8,7 @@
 ישירות, והשדרוג נעשה בדשבורד. עריכת דף קיים תמיד חינמית.
 
 **אין כאן שרת להריץ בעצמכם, ותפעול האתר חינמי לגמרי.** האתר עצמו הוא קובצי
-HTML/JS סטטיים, שמתארחים ב-GitHub Pages תחת `zikaron.r.is-cool.dev` (חינם).
+HTML/JS סטטיים, שמתארחים ב-GitHub Pages תחת `zikaron.reembir.com` (חינם).
 ההתחברות היא דרך reem.bi, שמנפיק לדפדפן גם טוקן ל-Firebase, ומסד הנתונים רץ
 ישירות מהדפדפן מול **Firestore** (חינמי בתוכנית ה-Spark, בלי כרטיס אשראי).
 קבצים (תמונות, הקלטות) מועלים ל-**Cloudinary** במקום ל-Firebase Storage (שדורש
@@ -71,7 +71,7 @@ HTML/JS סטטיים, שמתארחים ב-GitHub Pages תחת `zikaron.r.is-cool
 4. ב-[`worker/wrangler.toml`](./worker/wrangler.toml) יש ערכים לא-סודיים:
    - `FIREBASE_PROJECT_ID`: ה-Project ID מ-Firebase
    - `ALLOWED_ORIGIN`: הדומיין המדויק שהאתר מתארח בו (למשל
-     `https://zikaron.r.is-cool.dev`). חייב להתאים בדיוק לכתובת בשורת
+     `https://zikaron.reembir.com`). חייב להתאים בדיוק לכתובת בשורת
      הכתובת של הדפדפן, אחרת בקשות ה-API מהאתר ל-Worker ייחסמו (CORS)
    - `REEM_AUTH_ORIGIN` / `REEM_CLIENT_ID`: שרת reem.bi והמזהה של האתר בו
      (`zikaron`)
@@ -102,11 +102,11 @@ HTML/JS סטטיים, שמתארחים ב-GitHub Pages תחת `zikaron.r.is-cool
 3. מזגו את הענף הזה ל-`main` (או פשוט דחפו אליו) — ה-workflow
    [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) ירוץ
    אוטומטית, יבנה את האתר ויפרסם אותו.
-4. האתר מוגש מתת-הדומיין הייעודי שלו `zikaron.r.is-cool.dev` (לא תחת נתיב
-   כמו `r.is-cool.dev/zikaron`). כדי שזה יעבוד צריך:
+4. האתר מוגש מתת-הדומיין הייעודי שלו `zikaron.reembir.com` (לא תחת נתיב
+   כמו `reembir.com/zikaron`). כדי שזה יעבוד צריך:
    - רשומת DNS מסוג `CNAME` אצל ספק הדומיין: `zikaron` → `<your-username>.github.io`.
    - **Settings → Pages → Custom domain** בריפו **הזה** (לא בריפו של עמוד
-     המשתמש) — הזינו `zikaron.r.is-cool.dev` ואשרו.
+     המשתמש) — הזינו `zikaron.reembir.com` ואשרו.
 
    כתובת `NEXT_PUBLIC_SITE_URL`/`NEXT_PUBLIC_BASE_PATH` למעלה כבר מוגדרות
    לתת-דומיין הזה (בלי נתיב `/zikaron` בסוף) — אם תעברו לכתובת אחרת יש לעדכן
