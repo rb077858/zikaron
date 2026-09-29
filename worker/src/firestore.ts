@@ -95,6 +95,68 @@ export class FirestoreClient {
   }
 
   /**
+   * Equality query on one field of a collection (single-field indexes are
+   * automatic, so no composite index is needed). `parentPath` scopes it to
+   * a subcollection; omit for a top-level collection.
+   */
+  async queryEqual(
+    collectionId: string,
+    fieldPath: string,
+    value: FSValue,
+    parentPath = ""
+  ): Promise<Array<{ path: string; updateTime: string; fields: Record<string, unknown> }>> {
+    const url = parentPath ? `${this.base}/${parentPath}:runQuery` : `${this.base}:runQuery`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId }],
+          where: { fieldFilter: { field: { fieldPath }, op: "EQUAL", value } },
+        },
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Firestore query ${collectionId} failed (${res.status}): ${await res.text()}`);
+    }
+    const rows = (await res.json()) as Array<{
+      document?: { name: string; updateTime: string; fields?: Record<string, Record<string, unknown>> };
+    }>;
+    const prefix = this.docName("");
+    return rows
+      .filter((r) => r.document)
+      .map((r) => ({
+        path: r.document!.name.slice(prefix.length),
+        updateTime: r.document!.updateTime,
+        fields: parseFields(r.document!.fields),
+      }));
+  }
+
+  /** Paths of every document in a (sub)collection. */
+  async listPaths(collectionPath: string): Promise<string[]> {
+    const prefix = this.docName("");
+    const out: string[] = [];
+    let pageToken = "";
+    do {
+      const qs = new URLSearchParams({ pageSize: "300", "mask.fieldPaths": "ownerId" });
+      if (pageToken) qs.set("pageToken", pageToken);
+      const res = await fetch(`${this.base}/${collectionPath}?${qs}`, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+      });
+      if (!res.ok) {
+        throw new Error(`Firestore list ${collectionPath} failed (${res.status}): ${await res.text()}`);
+      }
+      const data = (await res.json()) as { documents?: Array<{ name: string }>; nextPageToken?: string };
+      for (const d of data.documents ?? []) out.push(d.name.slice(prefix.length));
+      pageToken = data.nextPageToken ?? "";
+    } while (pageToken);
+    return out;
+  }
+
+  /**
    * Commits one or more writes atomically. Each write can carry a
    * `currentDocument` precondition (exists / updateTime) for optimistic
    * concurrency — if any precondition fails, the WHOLE commit is rejected

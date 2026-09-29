@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { CandleFlame } from "@/components/CandleFlame";
-import { GoogleIcon } from "@/components/GoogleIcon";
-import { useCurrentUser, signInWithGoogle } from "@/lib/use-auth";
+import { useCurrentUser, signIn } from "@/lib/use-auth";
 
 const FEATURES = [
   {
@@ -31,25 +29,13 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: "1", t: "מתחברים עם חשבון Google" },
-  { n: "2", t: "רוכשים קרדיטים (5 קרדיטים = דף אחד)" },
-  { n: "3", t: "ממלאים את פרטי היקיר/ה ומעלים תמונות" },
-  { n: "4", t: "מקבלים קישור וברקוד להדפסה על המצבה" },
+  { n: "1", t: "מתחברים עם חשבון reem.bi (סיסמה, Google או קישור במייל)" },
+  { n: "2", t: "ממלאים את פרטי היקיר/ה ומעלים תמונות" },
+  { n: "3", t: "מקבלים קישור וברקוד להדפסה על המצבה" },
 ];
 
 export default function Home() {
-  const { user } = useCurrentUser();
-  const [busy, setBusy] = useState(false);
-
-  async function handleStart() {
-    if (user) return;
-    setBusy(true);
-    try {
-      await signInWithGoogle();
-    } finally {
-      setBusy(false);
-    }
-  }
+  const { user, loading, unavailable } = useCurrentUser();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -80,7 +66,9 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3">
-              {user ? (
+              {loading ? (
+                <span className="h-12 w-56 animate-pulse rounded-full bg-surface-2" aria-hidden />
+              ) : user ? (
                 <Link
                   href="/dashboard"
                   className="rounded-full bg-gold px-7 py-3 text-base font-semibold text-[#1a1206] shadow-lg shadow-gold/20 transition-colors hover:bg-gold-soft"
@@ -89,16 +77,17 @@ export default function Home() {
                 </Link>
               ) : (
                 <button
-                  onClick={handleStart}
-                  disabled={busy}
-                  className="flex items-center gap-2 rounded-full bg-gold px-7 py-3 text-base font-semibold text-[#1a1206] shadow-lg shadow-gold/20 transition-colors hover:bg-gold-soft disabled:opacity-60"
+                  onClick={signIn}
+                  disabled={unavailable}
+                  className="rounded-full bg-gold px-7 py-3 text-base font-semibold text-[#1a1206] shadow-lg shadow-gold/20 transition-colors hover:bg-gold-soft disabled:opacity-60"
                 >
-                  <GoogleIcon className="size-5" />
-                  התחברות עם Google והתחלה
+                  התחברות והתחלה
                 </button>
               )}
               <span className="text-sm text-muted">
-                ההתחברות חינמית · יצירת דף עולה 5 קרדיטים (5 ₪)
+                {unavailable
+                  ? "ההתחברות אינה זמינה כרגע. נסו שוב מאוחר יותר."
+                  : "ההתחברות חינמית · עריכת דף תמיד חינמית"}
               </span>
             </div>
           </div>
@@ -125,7 +114,7 @@ export default function Home() {
         {/* How it works */}
         <section className="mx-auto max-w-3xl px-5 py-16 text-center">
           <h2 className="mb-10 text-2xl font-bold text-gold-soft">איך זה עובד</h2>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
             {STEPS.map((s) => (
               <div key={s.n} className="flex flex-col items-center gap-3">
                 <div className="flex size-11 items-center justify-center rounded-full border border-gold text-lg font-bold text-gold">

@@ -2,16 +2,14 @@ name = "zikaron-worker"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-# Non-secret configuration. Secrets (PayPal client secret, Google service
-# account key, etc.) are set separately — see the README — never put them
-# here, since this file is committed to the repo.
+# Non-secret configuration. Secrets (the Google service account key) are
+# set separately — see the README — never put them here, since this file
+# is committed to the repo.
 [vars]
 FIREBASE_PROJECT_ID = "zikaron-93b28"
-# PAYPAL_CLIENT_ID, PAYPAL_API_BASE, and the PAYPAL_CLIENT_SECRET GitHub
-# secret must always move together between Sandbox and Live — a
-# Sandbox-created order can never be captured against the Live API (or vice
-# versa), so a mismatch between them makes every capture fail.
-PAYPAL_CLIENT_ID = "BAARIIw9kEcq8PDhNHl2_Ux39l3Ay9nBt_DHJq7TE0rJGoMcxTBP5SF6uQpXuWBOk3AhE9a7qjpD8Ljnvc"
-PAYPAL_API_BASE = "https://api-m.paypal.com"
-ADMIN_EMAIL = "rb077858@gmail.com"
 ALLOWED_ORIGIN = "https://zikaron.r.is-cool.dev"
+# reem.bi SSO — every API request's Bearer token is verified against
+# REEM_AUTH_ORIGIN/api/userinfo. REEM_CLIENT_ID is this site's id in the
+# reem.bi dashboard.
+REEM_AUTH_ORIGIN = "https://login.reembir.com"
+REEM_CLIENT_ID = "zikaron"

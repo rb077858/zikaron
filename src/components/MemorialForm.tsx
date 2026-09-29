@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCurrentUser } from "@/lib/use-auth";
+import { useCurrentUser, refreshAccount } from "@/lib/use-auth";
 import {
   updateMemorial,
   uploadCoverPhoto,
@@ -19,11 +19,10 @@ import {
 } from "@/lib/memorials";
 import {
   createMemorialViaWorker,
-  subscribeToCredits,
-  InsufficientCreditsError,
-  CREDITS_PER_MEMORIAL,
-  ADMIN_EMAIL,
-} from "@/lib/credits";
+  canCreateMemorial,
+  WorkerRequestError,
+  LEGACY_CREDITS_PER_MEMORIAL,
+} from "@/lib/worker-api";
 
 type Props = {
   mode: "create" | "edit";
@@ -79,7 +78,7 @@ export function MemorialForm({
   initialAudioUrl,
   initialPhotos,
 }: Props) {
-  const { user } = useCurrentUser();
+  const { user, account } = useCurrentUser();
   const router = useRouter();
   const [fields, setFields] = useState<MemorialFormInput>(initial ?? empty);
   const [includeTehilim, setIncludeTehilim] = useState(
@@ -95,16 +94,7 @@ export function MemorialForm({
   const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [credits, setCredits] = useState<number | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-
-  const isAdmin = user?.email === ADMIN_EMAIL;
-
-  useEffect(() => {
-    if (mode !== "create" || !user) return;
-    const unsub = subscribeToCredits(user.uid, setCredits);
-    return () => unsub();
-  }, [mode, user]);
 
   function update<K extends keyof MemorialFormInput>(key: K, value: MemorialFormInput[K]) {
     setFields((f) => ({ ...f, [key]: value }));
@@ -134,8 +124,8 @@ export function MemorialForm({
       };
       let targetSlug = slug;
       if (mode === "create") {
-        const idToken = await user.getIdToken();
-        targetSlug = await createMemorialViaWorker(idToken, payload);
+        targetSlug = await createMemorialViaWorker(payload);
+        void refreshAccount();
       } else if (targetSlug) {
         await updateMemorial(targetSlug, payload);
       }
@@ -153,11 +143,10 @@ export function MemorialForm({
 
       router.push(`/memorial?slug=${encodeURIComponent(targetSlug)}`);
     } catch (err) {
-      if (err instanceof InsufficientCreditsError) {
-        setError(
-          `אין מספיק קרדיטים ליצירת דף (יש לכם ${err.credits}, נדרשים ${CREDITS_PER_MEMORIAL}). ` +
-            `אפשר לרכוש קרדיטים בעמוד הקרדיטים.`
-        );
+      if (err instanceof WorkerRequestError && err.code === "LIMIT_REACHED") {
+        setError("הגעתם למספר דפי ההנצחה שהחבילה שלכם מאפשרת. לשדרוג, פנו אלינו בעמוד החבילה.");
+      } else if (err instanceof WorkerRequestError && err.code === "NO_ACCESS") {
+        setError("לחשבון הזה אין גישה לאתר. לפרטים פנו אלינו.");
       } else {
         console.error(err);
         setError("משהו השתבש בשמירה. נסו שוב.");
@@ -166,8 +155,14 @@ export function MemorialForm({
     }
   }
 
-  const notEnoughCredits =
-    mode === "create" && !isAdmin && credits !== null && credits < CREDITS_PER_MEMORIAL;
+  const limitReached = mode === "create" && account !== null && !canCreateMemorial(account);
+  // Past the plan's limit, a leftover balance from the old paid credits
+  // still pays for a page.
+  const usesLegacyCredits =
+    account !== null &&
+    account.maxMemorials !== null &&
+    account.memorialCount >= account.maxMemorials &&
+    !limitReached;
 
   async function handleDeletePhoto(photo: Photo) {
     if (!slug) return;
@@ -495,36 +490,46 @@ export function MemorialForm({
 
       {mode === "create" && (
         <div className="section-card rounded-2xl p-6 text-center">
-          {isAdmin ? (
-            <p className="text-sm text-gold-soft">חשבון מנהל — יצירת דפים ללא הגבלה וללא עלות.</p>
-          ) : (
-            <>
-              <p className="text-sm text-muted">
-                יצירת דף עולה <span className="font-bold text-gold-soft">{CREDITS_PER_MEMORIAL} קרדיטים</span>.
-                {credits !== null && (
-                  <> יתרתכם הנוכחית: <span className="font-bold text-foreground">{credits}</span>.</>
-                )}
-              </p>
-              <p className="mt-1 text-xs text-muted">עריכת דף לאחר יצירתו היא תמיד חינמית.</p>
-              {notEnoughCredits && (
-                <div className="mt-3 flex flex-col items-center gap-2">
-                  <p className="text-sm text-red-400">אין לכם מספיק קרדיטים ליצירת דף.</p>
-                  <Link
-                    href="/credits"
-                    className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors"
-                  >
-                    רכישת קרדיטים
-                  </Link>
-                </div>
+          {account && (
+            <p className="text-sm text-muted">
+              {account.maxMemorials === null ? (
+                <>החבילה שלכם מאפשרת דפים ללא הגבלה.</>
+              ) : (
+                <>
+                  דפי הנצחה בחבילה שלכם:{" "}
+                  <span className="font-bold text-foreground">
+                    {account.memorialCount} מתוך {account.maxMemorials}
+                  </span>
+                  .
+                </>
               )}
-            </>
+              {usesLegacyCredits && (
+                <>
+                  {" "}
+                  הדף ייווצר על חשבון יתרת הקרדיטים הקודמת שלכם ({LEGACY_CREDITS_PER_MEMORIAL} מתוך{" "}
+                  {account.credits}).
+                </>
+              )}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-muted">עריכת דף לאחר יצירתו היא תמיד חינמית.</p>
+          {limitReached && (
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <p className="text-sm text-red-400">הגעתם למספר הדפים שהחבילה שלכם מאפשרת.</p>
+              <Link
+                href="/upgrade"
+                className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors"
+              >
+                שדרוג החבילה
+              </Link>
+            </div>
           )}
         </div>
       )}
 
       <button
         type="submit"
-        disabled={submitting || notEnoughCredits}
+        disabled={submitting || limitReached}
         className="rounded-full bg-gold px-6 py-3 text-base font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors disabled:opacity-60"
       >
         {submitting ? "שומר..." : mode === "create" ? "יצירת דף ההנצחה" : "שמירת שינויים"}

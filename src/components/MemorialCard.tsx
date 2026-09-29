@@ -107,7 +107,7 @@ export function MemorialCard({
 
         {confirming && (
           <p className="mt-3 text-xs leading-5 text-red-400">
-            ⚠ שימו לב: הקרדיטים ששולמו על יצירת הדף הזה <b>לא יוחזרו</b> לאחר מחיקה.
+            ⚠ שימו לב: הדף וכל התוכן שבו יימחקו <b>לצמיתות</b>.
           </p>
         )}
       </div>

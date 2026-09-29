@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useCurrentUser } from "@/lib/use-auth";
+import { useCurrentUser, refreshAccount } from "@/lib/use-auth";
 import { disableMemoryWall } from "@/lib/memorials";
-import { enableMemoryWallViaWorker, MEMORY_WALL_COST, InsufficientCreditsError } from "@/lib/credits";
+import {
+  enableMemoryWallViaWorker,
+  WorkerRequestError,
+  LEGACY_MEMORY_WALL_COST,
+} from "@/lib/worker-api";
 
 /**
  * Owner-facing control for the "share a memory" add-on. Both branches rely
@@ -16,23 +20,27 @@ export function MemoryWallToggleCard({ slug, enabled }: { slug: string; enabled:
 }
 
 function EnableCard({ slug }: { slug: string }) {
-  const { user } = useCurrentUser();
+  const { user, account } = useCurrentUser();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
+  const [notInPlan, setNotInPlan] = useState(false);
+
+  const included = account?.memoryWall ?? false;
+  const legacyCredits = !included && (account?.credits ?? 0) >= LEGACY_MEMORY_WALL_COST;
+  const blocked = account !== null && !included && !legacyCredits;
 
   async function handleEnable() {
     if (!user) return;
     setSubmitting(true);
     setError(null);
-    setInsufficientCredits(false);
+    setNotInPlan(false);
     try {
-      const idToken = await user.getIdToken();
-      await enableMemoryWallViaWorker(idToken, slug);
+      await enableMemoryWallViaWorker(slug);
+      if (legacyCredits) void refreshAccount();
     } catch (err) {
-      if (err instanceof InsufficientCreditsError) {
-        setInsufficientCredits(true);
-        setError(`אין מספיק קרדיטים (יש לכם ${err.credits}, נדרשים ${MEMORY_WALL_COST}).`);
+      if (err instanceof WorkerRequestError && err.code === "NOT_IN_PLAN") {
+        setNotInPlan(true);
+        setError("שיתוף זיכרון אינו כלול בחבילה שלכם.");
       } else {
         console.error(err);
         setError("משהו השתבש, נסו שוב.");
@@ -45,29 +53,41 @@ function EnableCard({ slug }: { slug: string }) {
     <div className="section-card w-full max-w-sm rounded-2xl p-5 text-center">
       <p className="mb-1 text-sm font-semibold text-gold-soft">💭 הוספת שיתוף זיכרון</p>
       <p className="mb-4 text-xs leading-5 text-muted">
-        אפשרו למי שמכיר/ה את היקיר/ה לשתף כאן זיכרון, סיפור קטן ותמונות. תוספת
-        חד-פעמית לדף הזה בעלות {MEMORY_WALL_COST} קרדיטים.
+        אפשרו למי שמכיר/ה את היקיר/ה לשתף כאן זיכרון, סיפור קטן ותמונות.
+        {legacyCredits && (
+          <> ההפעלה תנוכה מיתרת הקרדיטים הקודמת שלכם ({LEGACY_MEMORY_WALL_COST} קרדיטים).</>
+        )}
+        {blocked && <> האפשרות זמינה בחבילה מורחבת.</>}
       </p>
       {error && (
         <p className="mb-3 text-xs text-red-400">
           {error}
-          {insufficientCredits && (
+          {notInPlan && (
             <>
               {" "}
-              <Link href="/credits" className="text-gold-soft hover:underline">
-                רכישת קרדיטים
+              <Link href="/upgrade" className="text-gold-soft hover:underline">
+                שדרוג החבילה
               </Link>
             </>
           )}
         </p>
       )}
-      <button
-        onClick={handleEnable}
-        disabled={submitting}
-        className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors disabled:opacity-60"
-      >
-        {submitting ? "מפעיל..." : `הפעלה (${MEMORY_WALL_COST} קרדיטים)`}
-      </button>
+      {blocked ? (
+        <Link
+          href="/upgrade"
+          className="inline-block rounded-full bg-gold px-5 py-2 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors"
+        >
+          שדרוג החבילה
+        </Link>
+      ) : (
+        <button
+          onClick={handleEnable}
+          disabled={submitting}
+          className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors disabled:opacity-60"
+        >
+          {submitting ? "מפעיל..." : "הפעלה"}
+        </button>
+      )}
     </div>
   );
 }
@@ -100,8 +120,7 @@ function DisableCard({ slug }: { slug: string }) {
       {confirming ? (
         <>
           <p className="mb-3 text-xs leading-5 text-red-400">
-            ⚠ שימו לב: {MEMORY_WALL_COST} הקרדיטים ששולמו על הפעלת האפשרות{" "}
-            <b>לא יוחזרו</b> לאחר הסרתה.
+            ⚠ שימו לב: הפעלה מחדש אפשרית רק אם החבילה שלכם <b>כוללת</b> שיתוף זיכרון.
           </p>
           <button
             onClick={handleDisable}
