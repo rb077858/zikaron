@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SignInPrompt } from "@/components/SignInPrompt";
 import { useCurrentUser } from "@/lib/use-auth";
-import { CONTACT_EMAIL } from "@/lib/worker-api";
+import { BILLING_EMAIL } from "@/lib/contact";
 
 export default function UpgradePage() {
   const { user, loading, account } = useCurrentUser();
@@ -27,7 +27,7 @@ export default function UpgradePage() {
     );
   }
 
-  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("שדרוג חבילה באתר זיכרון")}`;
+  const mailto = `mailto:${BILLING_EMAIL}?subject=${encodeURIComponent("שדרוג חבילה באתר זיכרון")}`;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -82,7 +82,7 @@ export default function UpgradePage() {
             פנייה לשדרוג
           </a>
           <p className="mt-3 text-xs text-muted" dir="ltr">
-            {CONTACT_EMAIL}
+            {BILLING_EMAIL}
           </p>
         </div>
 

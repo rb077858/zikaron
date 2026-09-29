@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { CandleFlame } from "@/components/CandleFlame";
+import { SUPPORT_EMAIL } from "@/lib/contact";
 import { useCurrentUser, signIn } from "@/lib/use-auth";
 
 const FEATURES = [
@@ -129,6 +130,12 @@ export default function Home() {
 
       <footer className="border-t border-border px-5 py-8 text-center text-sm text-muted">
         <p>זיכרון · דפי הנצחה דיגיטליים · נבנה באהבה ובכבוד</p>
+        <p className="mt-2">
+          תמיכה:{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gold-soft hover:underline" dir="ltr">
+            {SUPPORT_EMAIL}
+          </a>
+        </p>
       </footer>
     </div>
   );
