@@ -15,22 +15,20 @@ export function memorialAbsoluteUrl(slug: string): string {
 }
 
 /**
- * The link to share: goes through the Worker's /m/<slug>, which gives
- * WhatsApp/Facebook/etc. this memorial's own title, text and photo (the
- * static site can't), then forwards people to the page. Falls back to the
- * plain page URL when no Worker is configured.
+ * The link to share: zikaron.reembir.com/m/<slug>. On the site's own
+ * domain that path is answered by the Cloudflare Worker (a route in
+ * worker/wrangler.toml), which gives WhatsApp/Facebook/etc. this
+ * memorial's own title, text and photo — the static site can't — and then
+ * forwards people to the page. Without a configured site URL (local dev)
+ * it falls back to the Worker's own address, then to the plain page URL.
  */
 export function memorialShareUrl(slug: string): string {
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
   const worker = (process.env.NEXT_PUBLIC_WORKER_URL || "").replace(/\/$/, "");
-  return worker ? `${worker}/m/${encodeURIComponent(slug)}` : memorialAbsoluteUrl(slug);
+  const base = site && !BASE_PATH ? site : worker;
+  return base ? `${base}/m/${encodeURIComponent(slug)}` : memorialAbsoluteUrl(slug);
 }
 
-/**
- * The memorial id from a ?slug= value, ignoring anything glued onto it —
- * e.g. "/memorial?slug=israel-israeli?version=2" (a second "?"), a
- * trailing slash or punctuation picked up when a link is copied from a
- * message. Slugs are ASCII letters, digits and hyphens.
- */
 export function cleanSlug(raw: string | null | undefined): string {
   const m = (raw ?? "").trim().match(/^[A-Za-z0-9-]+/);
   return m ? m[0].replace(/-+$/, "") : "";
