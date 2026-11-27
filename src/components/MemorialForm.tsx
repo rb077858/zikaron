@@ -147,7 +147,10 @@ export function MemorialForm({
       if (err instanceof WorkerRequestError && err.code === "LIMIT_REACHED") {
         setError("הגעתם למספר דפי ההנצחה שהחבילה שלכם מאפשרת. לשדרוג, ראו את עמוד החבילה.");
       } else if (err instanceof WorkerRequestError && err.code === "NO_ACCESS") {
-        setError(`לחשבון הזה אין גישה לאתר. לעזרה: ${SUPPORT_EMAIL}`);
+        setError(
+          `לחשבון הזה אין גישה לאתר. לעזרה: ${SUPPORT_EMAIL}` +
+            (err.detail ? ` (קוד: ${err.detail})` : "")
+        );
       } else {
         console.error(err);
         setError("משהו השתבש בשמירה. נסו שוב.");

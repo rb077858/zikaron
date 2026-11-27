@@ -19,7 +19,9 @@ export type VerifiedUser = {
 export class AuthError extends Error {
   constructor(
     public code: "UNAUTHENTICATED" | "INVALID_TOKEN" | "NO_ACCESS" | "AUTH_UNAVAILABLE",
-    public status: number
+    public status: number,
+    /** Why access was refused — returned to the browser to help diagnose setup problems. */
+    public detail?: string
   ) {
     super(code);
   }
@@ -51,7 +53,7 @@ export async function verifyReemToken(request: Request, env: Env): Promise<Verif
     throw new AuthError("AUTH_UNAVAILABLE", 503);
   }
   if (res.status === 401) throw new AuthError("INVALID_TOKEN", 401);
-  if (res.status === 403) throw new AuthError("NO_ACCESS", 403);
+  if (res.status === 403) throw new AuthError("NO_ACCESS", 403, "SSO_REFUSED");
   if (!res.ok) throw new AuthError("AUTH_UNAVAILABLE", 503);
 
   const data = (await res.json().catch(() => null)) as UserInfo | null;
@@ -64,7 +66,9 @@ export async function verifyReemToken(request: Request, env: Env): Promise<Verif
   const site =
     data.access?.client_id ?? data.access?.site ?? data.client_id ?? data.site ??
     data.user?.client_id ?? data.user?.site;
-  if (site && site !== env.REEM_CLIENT_ID) throw new AuthError("NO_ACCESS", 403);
+  if (site && site !== env.REEM_CLIENT_ID) {
+    throw new AuthError("NO_ACCESS", 403, `SITE_MISMATCH:${String(site).slice(0, 80)}`);
+  }
 
   const email = typeof data.user?.email === "string" ? data.user.email.trim().toLowerCase() : "";
   return {
