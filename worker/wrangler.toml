@@ -2,6 +2,15 @@ name = "zikaron-worker"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+# Share links live on the site's own domain: zikaron.reembir.com/m/<slug>
+# is answered by this Worker (the subdomain is proxied through Cloudflare;
+# everything else on it is still GitHub Pages). The API stays on
+# workers.dev too, so keep that enabled.
+workers_dev = true
+routes = [
+  { pattern = "zikaron.reembir.com/m/*", zone_name = "reembir.com" },
+]
+
 # Non-secret configuration. Secrets (the Google service account key) are
 # set separately — see the README — never put them here, since this file
 # is committed to the repo.
