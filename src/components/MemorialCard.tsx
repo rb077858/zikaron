@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Memorial } from "@/lib/memorials";
 import { deleteMemorial } from "@/lib/memorials";
-import { memorialAbsoluteUrl } from "@/lib/base-url";
+import { memorialShareUrl } from "@/lib/base-url";
+import { copyText } from "@/lib/share";
 
 function year(iso: string): string {
   const y = iso?.slice(0, 4);
@@ -33,7 +34,7 @@ export function MemorialCard({
   }
 
   async function handleShare() {
-    const url = memorialAbsoluteUrl(memorial.slug);
+    const url = memorialShareUrl(memorial.slug);
     if (navigator.share) {
       try {
         await navigator.share({ title: `${memorial.firstName} ${memorial.lastName}`, url });
@@ -42,7 +43,7 @@ export function MemorialCard({
         // fall through to clipboard
       }
     }
-    await navigator.clipboard.writeText(url);
+    if (!(await copyText(url))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   }

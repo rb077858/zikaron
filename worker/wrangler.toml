@@ -8,6 +8,9 @@ compatibility_date = "2025-01-01"
 [vars]
 FIREBASE_PROJECT_ID = "zikaron-93b28"
 ALLOWED_ORIGIN = "https://zikaron.reembir.com"
+# Where share links (/m/<slug>) send people after giving social networks
+# the page's preview.
+PUBLIC_SITE_URL = "https://zikaron.reembir.com"
 # reem.bi SSO — every API request's Bearer token is verified against
 # REEM_AUTH_ORIGIN/api/userinfo. REEM_CLIENT_ID is this site's id in the
 # reem.bi dashboard.

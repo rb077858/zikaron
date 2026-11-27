@@ -13,3 +13,14 @@ export function memorialAbsoluteUrl(slug: string): string {
     process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000" + BASE_PATH;
   return `${site.replace(/\/$/, "")}/memorial?slug=${encodeURIComponent(slug)}`;
 }
+
+/**
+ * The link to share: goes through the Worker's /m/<slug>, which gives
+ * WhatsApp/Facebook/etc. this memorial's own title, text and photo (the
+ * static site can't), then forwards people to the page. Falls back to the
+ * plain page URL when no Worker is configured.
+ */
+export function memorialShareUrl(slug: string): string {
+  const worker = (process.env.NEXT_PUBLIC_WORKER_URL || "").replace(/\/$/, "");
+  return worker ? `${worker}/m/${encodeURIComponent(slug)}` : memorialAbsoluteUrl(slug);
+}
