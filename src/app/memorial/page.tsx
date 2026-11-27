@@ -25,9 +25,10 @@ import { MemoryWallToggleCard } from "@/components/memorial/MemoryWallToggleCard
 import { ShareRow } from "@/components/memorial/ShareRow";
 import { QrCodeCard } from "@/components/memorial/QrCodeCard";
 import { youtubeEmbedUrl } from "@/lib/youtube";
+import { cleanSlug } from "@/lib/base-url";
 
 function MemorialPageInner() {
-  const slug = useSearchParams().get("slug") ?? "";
+  const slug = cleanSlug(useSearchParams().get("slug"));
   const { user } = useCurrentUser();
   const [memorial, setMemorial] = useState<Memorial | null | undefined>(undefined);
   const [photos, setPhotos] = useState<Photo[]>([]);

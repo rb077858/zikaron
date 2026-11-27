@@ -8,9 +8,10 @@ import { MemorialForm } from "@/components/MemorialForm";
 import { useCurrentUser } from "@/lib/use-auth";
 import { SignInPrompt } from "@/components/SignInPrompt";
 import { getMemorialBySlug, subscribeToPhotos, type Memorial, type Photo } from "@/lib/memorials";
+import { cleanSlug } from "@/lib/base-url";
 
 function EditMemorialPageInner() {
-  const slug = useSearchParams().get("slug") ?? "";
+  const slug = cleanSlug(useSearchParams().get("slug"));
   const { user, loading: authLoading } = useCurrentUser();
   const [memorial, setMemorial] = useState<Memorial | null | undefined>(undefined);
   const [photos, setPhotos] = useState<Photo[]>([]);

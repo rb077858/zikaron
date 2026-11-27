@@ -449,11 +449,12 @@ export default {
 
     const url = new URL(request.url);
     // The shareable link with a per-memorial social preview.
-    const share = url.pathname.match(/^\/m\/([^/]+)\/?$/);
+    const share = url.pathname.match(/^\/m\/([^/]+)\/?/);
     if (share && (request.method === "GET" || request.method === "HEAD")) {
       let slug = "";
       try {
-        slug = decodeURIComponent(share[1]).toLowerCase();
+        // Ignore anything glued on when the link was copied (")", ".", "?…").
+        slug = decodeURIComponent(share[1]).match(/^[A-Za-z0-9-]+/)?.[0].replace(/-+$/, "") ?? "";
       } catch {
         // malformed escape — fall through with an empty slug
       }

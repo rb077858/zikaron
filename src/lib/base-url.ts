@@ -24,3 +24,14 @@ export function memorialShareUrl(slug: string): string {
   const worker = (process.env.NEXT_PUBLIC_WORKER_URL || "").replace(/\/$/, "");
   return worker ? `${worker}/m/${encodeURIComponent(slug)}` : memorialAbsoluteUrl(slug);
 }
+
+/**
+ * The memorial id from a ?slug= value, ignoring anything glued onto it —
+ * e.g. "/memorial?slug=israel-israeli?version=2" (a second "?"), a
+ * trailing slash or punctuation picked up when a link is copied from a
+ * message. Slugs are ASCII letters, digits and hyphens.
+ */
+export function cleanSlug(raw: string | null | undefined): string {
+  const m = (raw ?? "").trim().match(/^[A-Za-z0-9-]+/);
+  return m ? m[0].replace(/-+$/, "") : "";
+}
