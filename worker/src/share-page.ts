@@ -43,7 +43,7 @@ export async function handleSharePage(
   if (version) shareUrl.searchParams.set("version", version);
 
   let source: SharePreviewSource | null = null;
-  if (/^[a-z0-9-]{1,120}$/.test(slug)) {
+  if (/^[A-Za-z0-9-]{1,120}$/.test(slug)) {
     try {
       const db = await getDb();
       const doc = await db.get(`memorials/${slug}`);
