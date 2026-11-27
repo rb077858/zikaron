@@ -59,7 +59,11 @@ async function authenticate(request: Request, env: Env): Promise<AuthResult> {
     return { ok: true, user: await verifyReemToken(request, env) };
   } catch (err) {
     if (err instanceof AuthError) {
-      return { ok: false, response: json(env, { error: err.code }, err.status) };
+      if (err.detail) console.warn(`auth refused: ${err.code} ${err.detail}`);
+      return {
+        ok: false,
+        response: json(env, { error: err.code, ...(err.detail ? { detail: err.detail } : {}) }, err.status),
+      };
     }
     console.error(err);
     return { ok: false, response: json(env, { error: "AUTH_UNAVAILABLE" }, 503) };

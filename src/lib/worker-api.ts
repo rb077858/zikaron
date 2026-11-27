@@ -29,7 +29,9 @@ const WORKER_URL = (process.env.NEXT_PUBLIC_WORKER_URL || "").replace(/\/$/, "")
 export class WorkerRequestError extends Error {
   constructor(
     public code: string,
-    public status: number
+    public status: number,
+    /** Extra info from the Worker, e.g. why NO_ACCESS was returned. */
+    public detail?: string
   ) {
     super(code);
   }
@@ -51,7 +53,8 @@ async function workerFetch(path: string, body: unknown) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new WorkerRequestError((data as { error?: string }).error || `HTTP_${res.status}`, res.status);
+    const { error, detail } = data as { error?: string; detail?: string };
+    throw new WorkerRequestError(error || `HTTP_${res.status}`, res.status, detail);
   }
   return data;
 }
