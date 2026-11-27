@@ -31,9 +31,16 @@ export async function handleSharePage(
   getDb: () => Promise<FirestoreClient>
 ): Promise<Response> {
   const target = memorialPageUrl(env, slug);
-  const shareUrl = new URL(request.url);
-  shareUrl.search = "";
-  shareUrl.hash = "";
+  // The link as the networks should remember it. Everything after "?" is
+  // dropped except `version` (alias `v`): adding ?version=2 to a share link
+  // makes WhatsApp/Facebook treat it as a new link and fetch the preview
+  // again. Not advertised anywhere on the site — it's for testing previews.
+  const requestUrl = new URL(request.url);
+  const version = (requestUrl.searchParams.get("version") ?? requestUrl.searchParams.get("v") ?? "")
+    .trim()
+    .slice(0, 40);
+  const shareUrl = new URL(requestUrl.origin + requestUrl.pathname);
+  if (version) shareUrl.searchParams.set("version", version);
 
   let source: SharePreviewSource | null = null;
   if (/^[a-z0-9-]{1,120}$/.test(slug)) {
