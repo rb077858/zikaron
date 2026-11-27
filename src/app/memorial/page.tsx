@@ -144,6 +144,12 @@ function MemorialPageInner() {
               >
                 ✏️ עריכת דף ההנצחה
               </Link>
+              <Link
+                href={`/memorial/edit?slug=${encodeURIComponent(slug)}#share-preview`}
+                className="text-sm text-gold-soft hover:underline"
+              >
+                עריכת התצוגה בשיתוף ברשתות
+              </Link>
             </div>
           </section>
         )}

@@ -3,7 +3,7 @@
 import { getNextYahrzeit, daysUntil, formatYahrzeitHebrew } from "@/lib/hebrew-date";
 import { formatGregorianDateHe } from "@/lib/format";
 import { buildYahrzeitIcs, downloadIcs } from "@/lib/ics";
-import { memorialAbsoluteUrl } from "@/lib/base-url";
+import { memorialShareUrl } from "@/lib/base-url";
 import { shareText } from "@/lib/share";
 import type { Memorial } from "@/lib/memorials";
 
@@ -19,7 +19,7 @@ export function YahrzeitSection({ memorial }: { memorial: Memorial }) {
   }
 
   function handleShareDate() {
-    const url = memorialAbsoluteUrl(memorial.slug);
+    const url = memorialShareUrl(memorial.slug);
     const text = `יום הזיכרון של ${fullName} יחול ב-${formatGregorianDateHe(
       next
     )} (${formatYahrzeitHebrew(next)}).`;
@@ -35,15 +35,21 @@ export function YahrzeitSection({ memorial }: { memorial: Memorial }) {
           <span className="block text-base font-normal text-muted">{formatYahrzeitHebrew(next)}</span>
         </p>
 
-        <div className="section-card mb-6 grid grid-cols-2 divide-x divide-x-reverse divide-border rounded-2xl">
-          <div className="px-4 py-5">
-            <p className="text-3xl font-extrabold text-gold">{days}</p>
-            <p className="text-sm text-muted">ימים</p>
+        {days === 0 ? (
+          <div className="section-card mb-6 rounded-2xl px-4 py-5">
+            <p className="text-2xl font-extrabold text-gold">🕯️ האזכרה היום</p>
           </div>
-          <div className="flex items-center justify-center px-4 py-5 text-sm text-muted">
-            ימים שנותרו לאזכרה
+        ) : (
+          <div className="section-card mb-6 grid grid-cols-2 divide-x divide-x-reverse divide-border rounded-2xl">
+            <div className="px-4 py-5">
+              <p className="text-3xl font-extrabold text-gold">{days}</p>
+              <p className="text-sm text-muted">{days === 1 ? "יום" : "ימים"}</p>
+            </div>
+            <div className="flex items-center justify-center px-4 py-5 text-sm text-muted">
+              {days === 1 ? "האזכרה מחר" : "ימים שנותרו לאזכרה"}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <button

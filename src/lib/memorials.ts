@@ -38,6 +38,11 @@ export type Memorial = {
   graveImageUrl?: string | null;
   graveMapUrl?: string | null;
   tehilimChapter?: number | null;
+  /** Social-network link preview; empty = built from the page (see share-preview.ts) */
+  shareTitle?: string | null;
+  shareDescription?: string | null;
+  /** Empty = the cover photo */
+  shareImageUrl?: string | null;
   memoryWallEnabled?: boolean;
   published: boolean;
   createdAt?: Timestamp;
@@ -82,6 +87,8 @@ export type MemorialFormInput = {
   videoUrl?: string;
   graveMapUrl?: string;
   tehilimChapter?: number;
+  shareTitle?: string;
+  shareDescription?: string;
 };
 
 // Memorial creation (slug generation, credit deduction, admin bypass) is
@@ -109,6 +116,8 @@ export async function updateMemorial(
     videoUrl: fields.videoUrl || null,
     graveMapUrl: fields.graveMapUrl || null,
     tehilimChapter: typeof fields.tehilimChapter === "number" ? fields.tehilimChapter : null,
+    shareTitle: fields.shareTitle?.trim() || null,
+    shareDescription: fields.shareDescription?.trim() || null,
     updatedAt: serverTimestamp(),
   });
 }
@@ -237,6 +246,15 @@ export async function uploadCoverPhoto(slug: string, file: File): Promise<void> 
 
 export async function removeCoverPhoto(slug: string): Promise<void> {
   await updateDoc(doc(db, "memorials", slug), { coverPhotoUrl: null, updatedAt: serverTimestamp() });
+}
+
+export async function uploadShareImage(slug: string, file: File): Promise<void> {
+  const url = await uploadFile(slug, "share", file);
+  await updateDoc(doc(db, "memorials", slug), { shareImageUrl: url, updatedAt: serverTimestamp() });
+}
+
+export async function removeShareImage(slug: string): Promise<void> {
+  await updateDoc(doc(db, "memorials", slug), { shareImageUrl: null, updatedAt: serverTimestamp() });
 }
 
 export async function uploadGraveImage(slug: string, file: File): Promise<void> {

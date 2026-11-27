@@ -92,10 +92,13 @@ function EditMemorialPageInner() {
             videoUrl: memorial.videoUrl ?? "",
             graveMapUrl: memorial.graveMapUrl ?? "",
             tehilimChapter: memorial.tehilimChapter ?? undefined,
+            shareTitle: memorial.shareTitle ?? "",
+            shareDescription: memorial.shareDescription ?? "",
           }}
           initialCoverUrl={memorial.coverPhotoUrl}
           initialGraveImageUrl={memorial.graveImageUrl}
           initialAudioUrl={memorial.lifeStoryAudioUrl}
+          initialShareImageUrl={memorial.shareImageUrl}
           initialPhotos={photos}
         />
       </main>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrentUser, refreshAccount } from "@/lib/use-auth";
@@ -10,6 +10,8 @@ import {
   removeCoverPhoto,
   uploadGraveImage,
   removeGraveImage,
+  uploadShareImage,
+  removeShareImage,
   uploadLifeStoryAudio,
   addGalleryPhotos,
   deletePhoto,
@@ -18,6 +20,15 @@ import {
   type Photo,
 } from "@/lib/memorials";
 import { SUPPORT_EMAIL } from "@/lib/contact";
+import { toGematria } from "@/lib/gematria";
+import {
+  buildSharePreview,
+  defaultShareTitle,
+  defaultShareDescription,
+  previewImageUrl,
+  SHARE_TITLE_MAX,
+  SHARE_DESCRIPTION_MAX,
+} from "../../worker/src/share-preview";
 import {
   createMemorialViaWorker,
   canCreateMemorial,
@@ -32,8 +43,18 @@ type Props = {
   initialCoverUrl?: string | null;
   initialGraveImageUrl?: string | null;
   initialAudioUrl?: string | null;
+  initialShareImageUrl?: string | null;
   initialPhotos?: Photo[];
 };
+
+/** Object URL for a picked file, revoked when it changes or unmounts. */
+function useObjectUrl(file: File | null): string | null {
+  const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => {
+    if (url) URL.revokeObjectURL(url);
+  }, [url]);
+  return url;
+}
 
 const empty: MemorialFormInput = {
   firstName: "",
@@ -50,6 +71,8 @@ const empty: MemorialFormInput = {
   videoUrl: "",
   graveMapUrl: "",
   tehilimChapter: undefined,
+  shareTitle: "",
+  shareDescription: "",
 };
 
 function Field({
@@ -77,6 +100,7 @@ export function MemorialForm({
   initialCoverUrl,
   initialGraveImageUrl,
   initialAudioUrl,
+  initialShareImageUrl,
   initialPhotos,
 }: Props) {
   const { user, account } = useCurrentUser();
@@ -90,12 +114,26 @@ export function MemorialForm({
   const [graveFile, setGraveFile] = useState<File | null>(null);
   const [graveRemoved, setGraveRemoved] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [shareImageFile, setShareImageFile] = useState<File | null>(null);
+  const [shareImageRemoved, setShareImageRemoved] = useState(false);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos ?? []);
   const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const coverObjectUrl = useObjectUrl(coverFile);
+  const shareObjectUrl = useObjectUrl(shareImageFile);
+
+  // Arriving from "עריכת התצוגה בשיתוף" on the memorial page: the form
+  // renders after the page has loaded, so the browser can't jump there itself.
+  useEffect(() => {
+    if (location.hash !== "#share-preview") return;
+    const t = setTimeout(() => {
+      document.getElementById("share-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    return () => clearTimeout(t);
+  }, []);
 
   function update<K extends keyof MemorialFormInput>(key: K, value: MemorialFormInput[K]) {
     setFields((f) => ({ ...f, [key]: value }));
@@ -134,6 +172,7 @@ export function MemorialForm({
 
       if (coverFile) await uploadCoverPhoto(targetSlug, coverFile);
       if (graveFile) await uploadGraveImage(targetSlug, graveFile);
+      if (shareImageFile) await uploadShareImage(targetSlug, shareImageFile);
       if (audioFile) await uploadLifeStoryAudio(targetSlug, audioFile);
       if (galleryFiles.length > 0) {
         await addGalleryPhotos(targetSlug, galleryFiles, photos.length, {
@@ -190,6 +229,13 @@ export function MemorialForm({
     await removeCoverPhoto(slug);
     setCoverFile(null);
     setCoverRemoved(true);
+  }
+
+  async function handleRemoveShareImage() {
+    setShareImageFile(null);
+    if (!slug || !initialShareImageUrl) return;
+    await removeShareImage(slug);
+    setShareImageRemoved(true);
   }
 
   async function handleRemoveGrave() {
@@ -358,6 +404,11 @@ export function MemorialForm({
                   onChange={(e) => update("tehilimChapter", Number(e.target.value))}
                 />
               </Field>
+              {fields.tehilimChapter && fields.tehilimChapter >= 1 && fields.tehilimChapter <= 150 && (
+                <p className="mt-1.5 text-sm text-muted">
+                  יוצג בדף כ: <span className="font-bold text-gold-soft">תהילים פרק {toGematria(fields.tehilimChapter)}</span>, עם הפרק המלא
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -380,7 +431,7 @@ export function MemorialForm({
               <div className="mt-2 flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={coverFile ? URL.createObjectURL(coverFile) : initialCoverUrl!}
+                  src={coverObjectUrl ?? initialCoverUrl!}
                   alt=""
                   className="h-28 w-28 rounded-lg object-cover"
                 />
@@ -492,6 +543,19 @@ export function MemorialForm({
         </div>
       </section>
 
+      <SharePreviewEditor
+        fields={fields}
+        update={update}
+        coverUrl={coverFile ? coverObjectUrl : coverRemoved ? null : initialCoverUrl ?? null}
+        shareImageUrl={shareImageFile ? shareObjectUrl : shareImageRemoved ? null : initialShareImageUrl ?? null}
+        hasCustomImage={!!shareImageFile || (!!initialShareImageUrl && !shareImageRemoved)}
+        onPickImage={(f) => {
+          setShareImageFile(f);
+          setShareImageRemoved(false);
+        }}
+        onRemoveImage={handleRemoveShareImage}
+      />
+
       {mode === "create" && (
         <div className="section-card rounded-2xl p-6 text-center">
           {account && (
@@ -539,5 +603,118 @@ export function MemorialForm({
         {submitting ? "שומר..." : mode === "create" ? "יצירת דף ההנצחה" : "שמירת שינויים"}
       </button>
     </form>
+  );
+}
+
+function SharePreviewEditor({
+  fields,
+  update,
+  coverUrl,
+  shareImageUrl,
+  hasCustomImage,
+  onPickImage,
+  onRemoveImage,
+}: {
+  fields: MemorialFormInput;
+  update: <K extends keyof MemorialFormInput>(key: K, value: MemorialFormInput[K]) => void;
+  coverUrl: string | null;
+  shareImageUrl: string | null;
+  hasCustomImage: boolean;
+  onPickImage: (file: File) => void;
+  onRemoveImage: () => void;
+}) {
+  const preview = buildSharePreview({ ...fields, coverPhotoUrl: null, shareImageUrl: null });
+  const rawImage = shareImageUrl || coverUrl;
+  // Uploaded images get the same crop the networks will see; a file just
+  // picked (blob: URL) is shown cropped by CSS instead.
+  const image = rawImage?.startsWith("blob:") ? rawImage : previewImageUrl(rawImage);
+
+  return (
+    <section id="share-preview" className="section-card scroll-mt-24 rounded-2xl p-6">
+      <h2 className="mb-1 text-lg font-bold text-gold-soft">תצוגה בשיתוף ברשתות</h2>
+      <p className="mb-5 text-sm leading-6 text-muted">
+        כך ייראה הקישור לדף כשמשתפים אותו בוואטסאפ, בפייסבוק ובטלגרם. אפשר להשאיר ריק, ואז ייבנה אוטומטית מתוכן הדף.
+      </p>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <Field label="כותרת">
+            <input
+              className={inputClass}
+              maxLength={SHARE_TITLE_MAX}
+              placeholder={defaultShareTitle(fields)}
+              value={fields.shareTitle ?? ""}
+              onChange={(e) => update("shareTitle", e.target.value)}
+            />
+          </Field>
+          <Field label="תיאור קצר">
+            <textarea
+              className={`${inputClass} min-h-24 resize-y`}
+              maxLength={SHARE_DESCRIPTION_MAX}
+              placeholder={defaultShareDescription(fields)}
+              value={fields.shareDescription ?? ""}
+              onChange={(e) => update("shareDescription", e.target.value)}
+            />
+          </Field>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-muted">תמונה</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="cursor-pointer rounded-full border border-border px-4 py-1.5 text-sm font-medium text-gold-soft transition-colors hover:border-gold">
+                📷 {hasCustomImage ? "החלפת תמונה" : "בחירת תמונה אחרת"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) onPickImage(f);
+                  }}
+                />
+              </label>
+              {hasCustomImage && (
+                <button
+                  type="button"
+                  onClick={onRemoveImage}
+                  className="rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-red-500/50 hover:text-red-500"
+                >
+                  חזרה לתמונה הראשית
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-muted">
+              {hasCustomImage
+                ? "תוצג התמונה שבחרתם."
+                : coverUrl
+                  ? "כברירת מחדל מוצגת התמונה הראשית של הדף."
+                  : "אין תמונה ראשית, לכן הקישור יוצג בלי תמונה."}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-medium text-muted">תצוגה מקדימה</p>
+          <div className="rounded-2xl bg-[#e7ddd0] p-3">
+            <div className="mr-auto max-w-[19rem] overflow-hidden rounded-xl rounded-tl-sm bg-[#d9fdd3] p-1 shadow-sm">
+              <div className="overflow-hidden rounded-lg bg-[#cfe9c6]">
+                {image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={image} alt="" className="aspect-[1.91/1] w-full object-cover" />
+                )}
+                <div className="px-2.5 py-2 text-right">
+                  <p className="line-clamp-2 text-sm font-bold leading-5 text-[#111b21]">{preview.title}</p>
+                  {preview.description && (
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-4 text-[#54656f]">{preview.description}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-muted">
+            רשתות שכבר הציגו את הקישור שומרות את התצוגה הישנה לזמן מה, לכן שינוי עשוי להופיע אצלן רק אחרי כמה שעות.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }

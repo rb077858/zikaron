@@ -222,6 +222,8 @@ async function handleAccount(request: Request, env: Env): Promise<Response> {
 }
 
 type MemorialFormInput = {
+  shareTitle?: string;
+  shareDescription?: string;
   firstName: string;
   lastName: string;
   fatherName?: string;
@@ -326,6 +328,9 @@ async function handleCreateMemorial(request: Request, env: Env): Promise<Respons
             graveImageUrl: fsNull(),
             graveMapUrl: optString(body.graveMapUrl),
             tehilimChapter: optChapter(body.tehilimChapter),
+            shareTitle: optString(body.shareTitle),
+            shareDescription: optString(body.shareDescription),
+            shareImageUrl: fsNull(),
             memoryWallEnabled: fsBool(false),
             published: fsBool(true),
             createdAt: fsTimestamp(new Date()),
@@ -434,6 +439,8 @@ async function handleEnableMemoryWall(request: Request, env: Env): Promise<Respo
   return json(env, { error: "ENABLE_FAILED_RETRY_EXCEEDED" }, 500);
 }
 
+import { handleSharePage } from "./share-page";
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === "OPTIONS") {
@@ -441,6 +448,17 @@ export default {
     }
 
     const url = new URL(request.url);
+    // The shareable link with a per-memorial social preview.
+    const share = url.pathname.match(/^\/m\/([^/]+)\/?$/);
+    if (share && (request.method === "GET" || request.method === "HEAD")) {
+      let slug = "";
+      try {
+        slug = decodeURIComponent(share[1]).toLowerCase();
+      } catch {
+        // malformed escape — fall through with an empty slug
+      }
+      return handleSharePage(request, env, slug, () => getFirestoreClient(env));
+    }
     if (request.method === "POST" && url.pathname === "/api/account") {
       return handleAccount(request, env);
     }

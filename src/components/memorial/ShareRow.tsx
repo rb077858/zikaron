@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { memorialAbsoluteUrl } from "@/lib/base-url";
+import { memorialShareUrl } from "@/lib/base-url";
 import { copyText, shareText } from "@/lib/share";
 
 const NETWORKS = [
@@ -39,7 +39,7 @@ export function ShareRow({ slug, fullName }: { slug: string; fullName: string })
     () => typeof navigator.share === "function",
     () => false
   );
-  const url = memorialAbsoluteUrl(slug);
+  const url = memorialShareUrl(slug);
   const text = `לזכרו/ה של ${fullName}`;
 
   async function copyLink() {
