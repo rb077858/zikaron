@@ -24,6 +24,15 @@ export function buildYahrzeitIcs(fullName: string, date: Date): string {
 }
 
 export function downloadIcs(filename: string, content: string): void {
+  // iPhone/iPad Safari ignores `download` on blob links; opening the .ics
+  // as a data URL makes it offer "Add to Calendar" instead.
+  const isIos =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (isIos) {
+    window.location.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(content)}`;
+    return;
+  }
   const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -32,5 +41,6 @@ export function downloadIcs(filename: string, content: string): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Revoking right away cancels the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

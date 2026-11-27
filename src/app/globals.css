@@ -34,6 +34,25 @@ body {
   color: var(--foreground);
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Horizontal bars that scroll without showing a scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   font-family: var(--font-heebo), Arial, Helvetica, sans-serif;
 }
@@ -100,4 +119,56 @@ body {
 
 .memory-card {
   animation: memory-card-in 0.5s ease-out both;
+}
+
+/* Memorial page sections ease into view while scrolling */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s ease-out,
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes lightbox-img-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.lightbox-in {
+  animation: lightbox-in 0.2s ease-out both;
+}
+.lightbox-img {
+  animation: lightbox-img-in 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .lightbox-in,
+  .lightbox-img,
+  .memory-card {
+    animation: none;
+  }
 }

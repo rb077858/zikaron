@@ -4,13 +4,14 @@ export function GraveSection({ memorial }: { memorial: Memorial }) {
   if (!memorial.graveImageUrl && !memorial.graveMapUrl) return null;
 
   return (
-    <section className="px-5 py-14">
+    <section id="grave" className="scroll-mt-nav px-5 py-14">
       <div className="mx-auto max-w-xl text-center">
         {memorial.graveImageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={memorial.graveImageUrl}
             alt="מצבה"
+            loading="lazy"
             className="mx-auto max-h-[520px] w-full rounded-2xl border border-border object-cover"
           />
         )}

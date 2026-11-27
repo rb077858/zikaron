@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCurrentUser } from "@/lib/use-auth";
@@ -32,6 +32,7 @@ function MemorialPageInner() {
   const [memorial, setMemorial] = useState<Memorial | null | undefined>(undefined);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -50,6 +51,39 @@ function MemorialPageInner() {
     const unsub = subscribeToMemories(slug, setMemories);
     return () => unsub();
   }, [slug]);
+
+  // Sections fade gently into view as you scroll down. Anything already on
+  // screen (or everything, with reduced motion) shows immediately.
+  const sectionKey = memorial
+    ? [memorial.lifeStory, memorial.tehilimChapter, memorial.memoryWallEnabled, photos.length > 0].join("|")
+    : "";
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root) return;
+    const sections = Array.from(root.querySelectorAll<HTMLElement>(":scope > section"));
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced || typeof IntersectionObserver === "undefined") {
+      sections.forEach((el) => el.classList.add("is-visible"));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.05 }
+    );
+    sections.forEach((el) => {
+      if (el.classList.contains("is-visible")) return;
+      el.classList.add("reveal");
+      observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [sectionKey]);
 
   if (!slug || memorial === undefined) {
     return (
@@ -74,13 +108,14 @@ function MemorialPageInner() {
   const hasTehilim = !!memorial.tehilimChapter;
   const hasMedia = photos.length > 0 || !!(memorial.videoUrl && youtubeEmbedUrl(memorial.videoUrl));
   const hasMemoryWall = !!memorial.memoryWallEnabled;
+  const hasStory = !!(memorial.lifeStory || memorial.lifeStoryAudioUrl);
 
   return (
     <div className="flex min-h-screen flex-col">
       <HeroHeader memorial={memorial} />
-      <PublicNav hasTehilim={hasTehilim} hasMedia={hasMedia} hasMemoryWall={hasMemoryWall} />
+      <PublicNav hasStory={hasStory} hasTehilim={hasTehilim} hasMedia={hasMedia} hasMemoryWall={hasMemoryWall} />
 
-      <main className="flex-1">
+      <main ref={mainRef} className="flex-1">
         <IdCardSection memorial={memorial} />
         <LifeStorySection memorial={memorial} />
         <TehilimSection chapter={memorial.tehilimChapter} />

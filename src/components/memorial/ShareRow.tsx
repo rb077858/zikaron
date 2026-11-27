@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { memorialAbsoluteUrl } from "@/lib/base-url";
+import { copyText, shareText } from "@/lib/share";
 
 const NETWORKS = [
   {
@@ -28,15 +29,22 @@ const NETWORKS = [
   },
 ];
 
+const noopSubscribe = () => () => {};
+
 export function ShareRow({ slug, fullName }: { slug: string; fullName: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"ok" | "fail" | null>(null);
+  // false while prerendering, real value in the browser (no hydration mismatch)
+  const canNativeShare = useSyncExternalStore(
+    noopSubscribe,
+    () => typeof navigator.share === "function",
+    () => false
+  );
   const url = memorialAbsoluteUrl(slug);
   const text = `לזכרו/ה של ${fullName}`;
 
   async function copyLink() {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+    setCopied((await copyText(url)) ? "ok" : "fail");
+    setTimeout(() => setCopied(null), 2200);
   }
 
   return (
@@ -49,18 +57,28 @@ export function ShareRow({ slug, fullName }: { slug: string; fullName: string })
             href={n.url(url, text)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex size-12 items-center justify-center rounded-full border border-border text-xl hover:border-gold transition-colors"
+            className="flex size-12 items-center justify-center rounded-full border border-border bg-surface text-xl transition-all hover:-translate-y-0.5 hover:border-gold hover:shadow-md"
             aria-label={n.name}
           >
             {n.icon}
           </a>
         ))}
         <button
+          type="button"
           onClick={copyLink}
           className="flex h-12 items-center justify-center rounded-full border border-border px-4 text-sm hover:border-gold hover:text-gold-soft transition-colors"
         >
-          {copied ? "הקישור הועתק!" : "🔗 העתקת קישור"}
+          {copied === "ok" ? "✓ הקישור הועתק" : copied === "fail" ? "ההעתקה נכשלה" : "🔗 העתקת קישור"}
         </button>
+        {canNativeShare && (
+          <button
+            type="button"
+            onClick={() => void shareText(text, url, fullName)}
+            className="flex h-12 items-center justify-center rounded-full bg-gold px-5 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors"
+          >
+            📤 שיתוף
+          </button>
+        )}
       </div>
     </section>
   );

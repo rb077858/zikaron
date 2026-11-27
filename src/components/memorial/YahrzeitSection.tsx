@@ -4,6 +4,7 @@ import { getNextYahrzeit, daysUntil, formatYahrzeitHebrew } from "@/lib/hebrew-d
 import { formatGregorianDateHe } from "@/lib/format";
 import { buildYahrzeitIcs, downloadIcs } from "@/lib/ics";
 import { memorialAbsoluteUrl } from "@/lib/base-url";
+import { shareText } from "@/lib/share";
 import type { Memorial } from "@/lib/memorials";
 
 export function YahrzeitSection({ memorial }: { memorial: Memorial }) {
@@ -21,12 +22,12 @@ export function YahrzeitSection({ memorial }: { memorial: Memorial }) {
     const url = memorialAbsoluteUrl(memorial.slug);
     const text = `יום הזיכרון של ${fullName} יחול ב-${formatGregorianDateHe(
       next
-    )} (${formatYahrzeitHebrew(next)}).\n${url}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    )} (${formatYahrzeitHebrew(next)}).`;
+    void shareText(text, url, `יום הזיכרון של ${fullName}`);
   }
 
   return (
-    <section className="px-5 py-14">
+    <section id="yahrzeit" className="scroll-mt-nav px-5 py-14">
       <div className="mx-auto max-w-lg text-center">
         <h2 className="mb-1 text-xl font-bold text-gold-soft">האזכרה הבאה</h2>
         <p className="mb-6 text-2xl font-extrabold text-foreground">
@@ -46,12 +47,14 @@ export function YahrzeitSection({ memorial }: { memorial: Memorial }) {
 
         <div className="flex flex-col gap-3">
           <button
+            type="button"
             onClick={handleAddToCalendar}
             className="rounded-full bg-gold px-6 py-3 text-sm font-semibold text-[#1a1206] hover:bg-gold-soft transition-colors"
           >
             📅 הוספה ללוח השנה
           </button>
           <button
+            type="button"
             onClick={handleShareDate}
             className="rounded-full border border-border px-6 py-3 text-sm font-semibold hover:border-gold hover:text-gold-soft transition-colors"
           >

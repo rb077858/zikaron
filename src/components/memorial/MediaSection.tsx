@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Photo, Memorial } from "@/lib/memorials";
 import { youtubeEmbedUrl } from "@/lib/youtube";
+import { Lightbox } from "@/components/memorial/Lightbox";
 
 export function MediaSection({
   memorial,
@@ -11,7 +12,7 @@ export function MediaSection({
   memorial: Memorial;
   photos: Photo[];
 }) {
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<number | null>(null);
   const embedUrl = memorial.videoUrl ? youtubeEmbedUrl(memorial.videoUrl) : null;
 
   if (photos.length === 0 && !embedUrl) return null;
@@ -30,6 +31,8 @@ export function MediaSection({
           <div className="mx-auto mb-10 aspect-video max-w-2xl overflow-hidden rounded-2xl border border-border">
             <iframe
               src={embedUrl}
+              title="סרטון"
+              loading="lazy"
               className="h-full w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -39,28 +42,34 @@ export function MediaSection({
 
         {photos.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {photos.map((p) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+            {photos.map((p, i) => (
+              <button
                 key={p.id}
-                src={p.url}
-                alt={p.caption || ""}
-                onClick={() => setLightbox(p.url)}
-                className="aspect-square w-full cursor-pointer rounded-xl object-cover transition-transform hover:scale-[1.02]"
-              />
+                type="button"
+                onClick={() => setLightbox(i)}
+                aria-label="הגדלת התמונה"
+                className="group overflow-hidden rounded-xl border border-border/60 bg-surface-2 focus-visible:outline-2 focus-visible:outline-gold"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.url}
+                  alt={p.caption || ""}
+                  loading="lazy"
+                  className="aspect-square w-full cursor-zoom-in object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                />
+              </button>
             ))}
           </div>
         )}
       </div>
 
-      {lightbox && (
-        <div
-          onClick={() => setLightbox(null)}
-          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/90 p-6"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-lg object-contain" />
-        </div>
+      {lightbox !== null && (
+        <Lightbox
+          images={photos.map((p) => p.url)}
+          index={lightbox}
+          onIndexChange={setLightbox}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </section>
   );
