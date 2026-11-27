@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { addMemory, deleteMemory, type Memory, type Memorial } from "@/lib/memorials";
+import { Lightbox } from "@/components/memorial/Lightbox";
 
 const MAX_PHOTOS = 4;
 
@@ -23,11 +24,17 @@ export function MemoryWallSection({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justShared, setJustShared] = useState(false);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   async function handleDeleteMemory(memoryId: string) {
-    await deleteMemory(slug, memoryId);
+    setDeleteError(null);
+    try {
+      await deleteMemory(slug, memoryId);
+    } catch {
+      setDeleteError("לא הצלחנו למחוק את הזיכרון, נסו שוב");
+    }
     setConfirmDeleteId(null);
   }
 
@@ -74,7 +81,7 @@ export function MemoryWallSection({
         </p>
 
         <form onSubmit={handleSubmit} className="w-full space-y-3 text-right">
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-500">{error}</p>}
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -87,14 +94,21 @@ export function MemoryWallSection({
             placeholder={`זיכרון או סיפור קטן על ${fullName}...`}
             className="min-h-24 w-full resize-y rounded-lg border border-border bg-surface-2 px-4 py-2.5 placeholder:text-muted/60 focus:border-gold focus:outline-none"
           />
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-muted">צירוף תמונות (עד {MAX_PHOTOS}, אופציונלי)</span>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-surface px-4 py-3 transition-colors hover:border-gold">
+            <span className="text-sm text-muted">
+              {photoFiles.length > 0
+                ? `נבחרו ${photoFiles.length} תמונות`
+                : `צירוף תמונות (עד ${MAX_PHOTOS}, לא חובה)`}
+            </span>
+            <span className="shrink-0 rounded-full border border-border px-3 py-1 text-sm font-medium text-gold-soft">
+              📷 בחירה
+            </span>
             <input
               type="file"
               accept="image/*"
               multiple
               onChange={(e) => setPhotoFiles(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}
-              className="text-sm text-muted"
+              className="sr-only"
             />
           </label>
           <button
@@ -109,6 +123,7 @@ export function MemoryWallSection({
 
       {memories.length > 0 && (
         <div className="mx-auto mt-14 max-w-4xl">
+          {deleteError && <p className="mb-4 text-center text-sm text-red-500">{deleteError}</p>}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {memories.map((m, i) => (
               <div
@@ -159,7 +174,8 @@ export function MemoryWallSection({
                         key={pi}
                         src={url}
                         alt=""
-                        onClick={() => setLightbox(url)}
+                        loading="lazy"
+                        onClick={() => setLightbox({ images: m.photoUrls, index: pi })}
                         className={`w-full cursor-pointer object-cover transition-transform hover:scale-[1.03] ${
                           m.photoUrls.length === 1 ? "max-h-72" : "aspect-square"
                         }`}
@@ -179,13 +195,12 @@ export function MemoryWallSection({
       )}
 
       {lightbox && (
-        <div
-          onClick={() => setLightbox(null)}
-          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/90 p-6"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-lg object-contain" />
-        </div>
+        <Lightbox
+          images={lightbox.images}
+          index={lightbox.index}
+          onIndexChange={(index) => setLightbox({ ...lightbox, index })}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </section>
   );

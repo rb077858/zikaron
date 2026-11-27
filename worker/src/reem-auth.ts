@@ -33,12 +33,37 @@ export function getBearerToken(request: Request): string | null {
   return match ? match[1] : null;
 }
 
+// `site` may be a plain id ("zikaron") or an object describing the site
+// ({ id, client_id, slug, name, ... }).
+type SiteRef = string | Record<string, unknown>;
+
 type UserInfo = {
-  user?: { id?: string; email?: string | null; features?: Features; site?: string; client_id?: string };
-  access?: { features?: Features; site?: string; client_id?: string };
-  site?: string;
-  client_id?: string;
+  user?: { id?: string; email?: string | null; features?: Features; site?: SiteRef; client_id?: SiteRef };
+  access?: { features?: Features; site?: SiteRef; client_id?: SiteRef };
+  site?: SiteRef;
+  client_id?: SiteRef;
 };
+
+/** Every identifier a site reference could be known by. */
+function siteIds(ref: unknown): string[] {
+  if (typeof ref === "string" || typeof ref === "number") return [String(ref)];
+  if (ref && typeof ref === "object") {
+    const o = ref as Record<string, unknown>;
+    return ["client_id", "clientId", "id", "slug", "key", "name"]
+      .map((k) => o[k])
+      .filter((v): v is string | number => typeof v === "string" || typeof v === "number")
+      .map(String);
+  }
+  return [];
+}
+
+function describeSite(ref: unknown): string {
+  try {
+    return (typeof ref === "string" ? ref : JSON.stringify(ref)).slice(0, 120);
+  } catch {
+    return "unknown";
+  }
+}
 
 export async function verifyReemToken(request: Request, env: Env): Promise<VerifiedUser> {
   const token = getBearerToken(request);
@@ -66,8 +91,8 @@ export async function verifyReemToken(request: Request, env: Env): Promise<Verif
   const site =
     data.access?.client_id ?? data.access?.site ?? data.client_id ?? data.site ??
     data.user?.client_id ?? data.user?.site;
-  if (site && site !== env.REEM_CLIENT_ID) {
-    throw new AuthError("NO_ACCESS", 403, `SITE_MISMATCH:${String(site).slice(0, 80)}`);
+  if (site && !siteIds(site).includes(env.REEM_CLIENT_ID)) {
+    throw new AuthError("NO_ACCESS", 403, `SITE_MISMATCH:${describeSite(site)}`);
   }
 
   const email = typeof data.user?.email === "string" ? data.user.email.trim().toLowerCase() : "";

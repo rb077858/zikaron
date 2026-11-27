@@ -1,84 +1,160 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-type NavItem = { href: string; icon: string; label: string };
+type NavItem = { id: string; icon: string; label: string };
 
 // Order mirrors the section order on the page. Sharing a memory is a
 // closing, participatory action rather than the entry point, so it sits
 // last — not first, where a first-time visitor would otherwise be asked to
 // act before they've even seen who the page is for.
 const BASE_ITEMS: NavItem[] = [
-  { href: "#top", icon: "⌂", label: "ראשי" },
-  { href: "#whoami", icon: "🪪", label: "מי אני?" },
-  { href: "#tehilim", icon: "📖", label: "תהילים" },
-  { href: "#media", icon: "🖼️", label: "מדיה" },
-  { href: "#memories", icon: "💭", label: "שיתוף זיכרון" },
+  { id: "top", icon: "⌂", label: "ראשי" },
+  { id: "whoami", icon: "🪪", label: "מי אני?" },
+  { id: "story", icon: "📜", label: "סיפור חיים" },
+  { id: "tehilim", icon: "📖", label: "תהילים" },
+  { id: "media", icon: "🖼️", label: "מדיה" },
+  { id: "memories", icon: "💭", label: "שיתוף זיכרון" },
 ];
 
+/** Distance from the top of the document, ignoring CSS transforms (the fade-in shifts sections). */
+function documentTop(el: HTMLElement): number {
+  let top = 0;
+  for (let node: HTMLElement | null = el; node; node = node.offsetParent as HTMLElement | null) {
+    top += node.offsetTop;
+  }
+  return top;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
 export function PublicNav({
+  hasStory,
   hasTehilim,
   hasMedia,
   hasMemoryWall,
 }: {
+  hasStory: boolean;
   hasTehilim: boolean;
   hasMedia: boolean;
   hasMemoryWall: boolean;
 }) {
   const items = BASE_ITEMS.filter((item) => {
-    if (item.href === "#tehilim") return hasTehilim;
-    if (item.href === "#media") return hasMedia;
-    if (item.href === "#memories") return hasMemoryWall;
+    if (item.id === "story") return hasStory;
+    if (item.id === "tehilim") return hasTehilim;
+    if (item.id === "media") return hasMedia;
+    if (item.id === "memories") return hasMemoryWall;
     return true;
   });
-  const key = items.map((i) => i.href).join(",");
+  const key = items.map((i) => i.id).join(",");
 
-  const [active, setActive] = useState(items[0]?.href ?? "#top");
+  const navRef = useRef<HTMLElement>(null);
+  const [active, setActive] = useState(items[0]?.id ?? "top");
+  // While a click-triggered smooth scroll runs, the scroll spy would flick
+  // through every section in between; hold the clicked one instead.
+  const lockUntil = useRef(0);
 
+  // Scroll spy: the active section is the last one whose top has passed
+  // just below the sticky nav. Works for short sections too, and at the
+  // very bottom of the page the last section wins.
   useEffect(() => {
-    const sections = items
-      .map((item) => document.getElementById(item.href.slice(1)))
-      .filter((el): el is HTMLElement => !!el);
-    if (sections.length === 0) return;
+    let frame = 0;
+    function update() {
+      frame = 0;
+      if (Date.now() < lockUntil.current) return;
+      const offset = (navRef.current?.offsetHeight ?? 64) + 24;
+      let current = items[0]?.id ?? "top";
+      for (const item of items) {
+        const el = document.getElementById(item.id);
+        if (el && documentTop(el) - window.scrollY - offset <= 0) current = item.id;
+      }
+      const atBottom =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      if (atBottom && items.length) {
+        const last = items[items.length - 1];
+        if (document.getElementById(last.id)) current = last.id;
+      }
+      setActive(current);
+    }
+    function onScroll() {
+      if (!frame) frame = requestAnimationFrame(update);
+    }
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) setActive(`#${visible[0].target.id}`);
-      },
-      { rootMargin: "-45% 0px -50% 0px", threshold: 0 }
-    );
-    sections.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+  // Keep the active tab visible when the bar scrolls sideways on a phone.
+  useEffect(() => {
+    const tab = navRef.current?.querySelector<HTMLElement>(`[data-nav="${active}"]`);
+    tab?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }, [active]);
+
+  const goTo = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const navHeight = navRef.current?.offsetHeight ?? 64;
+    const top = id === "top" ? 0 : documentTop(el) - navHeight - 12;
+    setActive(id);
+    lockUntil.current = Date.now() + 900;
+    window.scrollTo({ top: Math.max(0, top), behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    // Keep the address shareable without letting the browser jump.
+    history.replaceState(null, "", `${location.pathname}${location.search}#${id}`);
+  }, []);
+
+  // Arriving with a #hash (e.g. a shared link to the memory wall): the
+  // sections load after the page, so scroll once they exist.
+  useEffect(() => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (id && items.some((i) => i.id === id)) {
+      const t = setTimeout(() => goTo(id), 150);
+      return () => clearTimeout(t);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-border/80 bg-background/90 shadow-[0_1px_0_rgba(212,175,106,0.08)] backdrop-blur-md">
-      <div className="mx-auto flex max-w-4xl items-stretch justify-between px-2">
+    <nav
+      ref={navRef}
+      aria-label="ניווט בדף"
+      className="sticky top-0 z-40 border-b border-border/80 bg-background/90 shadow-[0_1px_0_rgba(212,175,106,0.08)] backdrop-blur-md"
+    >
+      <div className="no-scrollbar mx-auto flex max-w-4xl items-stretch justify-between overflow-x-auto px-1">
         {items.map((item) => {
-          const isActive = active === item.href;
+          const isActive = active === item.id;
           return (
             <a
-              key={item.href}
-              href={item.href}
-              className={`group relative flex flex-1 flex-col items-center gap-1 px-2 py-3 text-center transition-colors ${
+              key={item.id}
+              data-nav={item.id}
+              href={`#${item.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                goTo(item.id);
+              }}
+              aria-current={isActive ? "location" : undefined}
+              className={`group relative flex min-w-[3.6rem] flex-1 shrink-0 flex-col items-center gap-1 px-1 py-3 text-center transition-colors duration-300 ${
                 isActive ? "text-gold-soft" : "text-foreground/75 hover:text-gold-soft"
               }`}
             >
               <span
-                className={`text-xl leading-none transition-transform ${
+                className={`text-xl leading-none transition-transform duration-300 ${
                   isActive ? "scale-110" : "group-hover:scale-105"
                 }`}
               >
                 {item.icon}
               </span>
-              <span className="text-[11px] font-medium sm:text-xs">{item.label}</span>
+              <span className="whitespace-nowrap text-[10.5px] font-medium min-[400px]:text-[11px] sm:text-xs">{item.label}</span>
               <span
-                className={`absolute inset-x-4 -bottom-px h-[2px] rounded-full bg-gold transition-opacity ${
-                  isActive ? "opacity-100" : "opacity-0"
+                className={`absolute inset-x-3 -bottom-px h-[2px] rounded-full bg-gold transition-all duration-300 ${
+                  isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
                 }`}
               />
             </a>

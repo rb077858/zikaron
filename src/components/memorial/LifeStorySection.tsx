@@ -9,7 +9,7 @@ export function LifeStorySection({ memorial }: { memorial: Memorial }) {
     .filter(Boolean);
 
   return (
-    <section className="px-5 py-14">
+    <section id="story" className="scroll-mt-nav px-5 py-14">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center justify-center gap-3">
           <div className="gold-divider flex-1" />
